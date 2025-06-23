@@ -1,0 +1,54 @@
+name: Build brotli
+
+on:
+  workflow_dispatch:
+    inputs:
+      brotli_version:
+        description: 'brotli version'
+        required: true
+        default: '1.0.9'
+
+jobs:
+
+  build-android-brotli:
+
+    runs-on: ubuntu-latest
+    env:
+      BROTLI_VERSION: ${{ github.event.inputs.brotli_version || '1.0.9' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout brotli source code
+        uses: actions/checkout@v4
+        with: 
+          repository: google/brotli
+          ref: refs/tags/v${{ env.BROTLI_VERSION }}
+          path: build/android/brotli/build/brotli-${{ env.BROTLI_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+  
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/brotli/build.sh
+          ./scripts/android/brotli/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/brotli ${{ env.BROTLI_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          BROTLI_VERSION: ${{ env.BROTLI_VERSION }}
+        
+      - name: Upload brotli artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-brotli
+          path: build/android/brotli/install
+          overwrite: true

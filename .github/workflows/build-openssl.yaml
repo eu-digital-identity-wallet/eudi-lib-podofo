@@ -1,0 +1,49 @@
+name: Build openssl
+
+on:
+  workflow_dispatch:
+    inputs:
+      openssl_version:
+        description: 'openssl version'
+        required: true
+        default: '3.2.1'
+
+jobs:
+
+  build-android-openssl:
+
+    runs-on: ubuntu-latest
+    env:
+      OPENSSL_VERSION: ${{ github.event.inputs.openssl_version || '3.2.1' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract openssl
+        run: |
+          mkdir -p build/android/openssl/download/ build/android/openssl/build/
+          curl -L https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz -o build/android/openssl/download/openssl-${{ env.OPENSSL_VERSION }}.tar.gz
+          tar xzf build/android/openssl/download/openssl-${{ env.OPENSSL_VERSION }}.tar.gz -C build/android/openssl/build/
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/openssl/build.sh
+          ./scripts/android/openssl/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/openssl ${{ env.OPENSSL_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          OPENSSL_VERSION: ${{ env.OPENSSL_VERSION }}
+        
+      - name: Upload openssl artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-openssl
+          path: build/android/openssl/install
+          overwrite: true

@@ -1,0 +1,48 @@
+name: Build bzip2
+
+on:
+  workflow_dispatch:
+    inputs:
+      bzip2_version:
+        description: 'bzip2 version'
+        required: true
+        default: '1.0.8'
+
+jobs:
+
+  build-android-bzip2:
+
+    runs-on: ubuntu-latest
+    env:
+      BZIP2_VERSION: ${{ github.event.inputs.bzip2_version || '1.0.8' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract bzip2
+        run: |
+          mkdir -p build/android/bzip2/download/ build/android/bzip2/build/
+          curl -L https://sourceware.org/pub/bzip2/bzip2-${{ env.BZIP2_VERSION }}.tar.gz -o build/android/bzip2/download/bzip2-${{ env.BZIP2_VERSION }}.tar.gz
+          tar -xzf build/android/bzip2/download/bzip2-${{ env.BZIP2_VERSION }}.tar.gz -C build/android/bzip2/build/
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/bzip2/build.sh
+          ./scripts/android/bzip2/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/bzip2 ${{ env.BZIP2_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+      
+      - name: Upload bzip2 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-bzip2
+          path: build/android/bzip2/install
+          overwrite: true

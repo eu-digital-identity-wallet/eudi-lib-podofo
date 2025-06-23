@@ -1,0 +1,71 @@
+name: Build libpng
+
+on:
+  workflow_dispatch:
+    inputs:
+      libpng_version:
+        description: 'libpng version'
+        required: true
+        default: '1.6.43'
+
+jobs:
+
+  build-android-libpng:
+
+    runs-on: ubuntu-latest
+    env:
+      LIBPNG_VERSION: ${{ github.event.inputs.libpng_version || '1.6.43' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract libpng
+        run: |
+          mkdir -p build/android/libpng/download/ build/android/libpng/build/
+          curl -L https://downloads.sourceforge.net/project/libpng/libpng16/${{ env.LIBPNG_VERSION }}/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -o build/android/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz
+          tar -xzf build/android/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -C build/android/libpng/build/
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/brotli/build.sh
+          ./scripts/android/libpng/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/libpng ${{ env.LIBPNG_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          LIBPNG_VERSION: ${{ env.LIBPNG_VERSION }}
+      
+      - name: Upload libpng artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-libpng
+          path: build/android/libpng/install
+          overwrite: true
+
+  build-ios-libpng:
+    runs-on: macos-latest
+    env:
+      LIBPNG_VERSION: ${{ github.event.inputs.libpng_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract libpng
+        run: |
+          mkdir -p build/ios/libpng/download/ build/ios/libpng/build/
+          curl -L https://downloads.sourceforge.net/project/libpng/libpng16/${{ env.LIBPNG_VERSION }}/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -o build/ios/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz
+          tar -xzf build/ios/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -C build/ios/libpng/build/
+
+      - name: Build from source
+        run: |
+          chmod +x scripts/ios/brotli/build.sh
+          ./scripts/ios/libpng/build.sh build/ios/libpng ${{ env.LIBPNG_VERSION }} --skip-prepare
+        env:
+          LIBPNG_VERSION: ${{ env.LIBPNG_VERSION }}

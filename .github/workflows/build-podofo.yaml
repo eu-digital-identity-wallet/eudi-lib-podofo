@@ -1,0 +1,41 @@
+name: Build podofo
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build-podofo:
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+  
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          cd build/android/podofo
+          chmod +x build.sh
+          ./build.sh
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+        
+      - name: Upload brotli artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-brotli
+          path: build/android/brotli/install
+          overwrite: true

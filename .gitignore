@@ -15,7 +15,7 @@ x86/
 *.asv
 *.autosave
 .qmake.stash
-.*/
+.idea
 ._*
 *.kdev4
 *-swp

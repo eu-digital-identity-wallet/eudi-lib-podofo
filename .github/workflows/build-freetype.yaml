@@ -1,0 +1,61 @@
+name: Build freetype
+
+on:
+  workflow_dispatch:
+    inputs:
+      freetype_version:
+        description: 'freetype version'
+        required: true
+        default: '2.13.2'
+
+jobs:
+
+  build-android-freetype:
+
+    runs-on: ubuntu-latest
+    env:
+      FREETYPE_VERSION: ${{ github.event.inputs.freetype_version || '2.13.2' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract freetype
+        run: |
+          mkdir -p build/android/freetype/download/ build/android/freetype/build/
+          curl -L https://download.savannah.gnu.org/releases/freetype/freetype-${{ env.FREETYPE_VERSION }}.tar.gz -o build/android/freetype/download/freetype-${{ env.FREETYPE_VERSION }}.tar.gz
+          tar xzf build/android/freetype/download/freetype-${{ env.FREETYPE_VERSION }}.tar.gz -C build/android/freetype/build/
+      
+      - uses: actions/download-artifact@v4
+        id: deps-brotli
+        with:
+          name: deps-android-brotli
+          path: build/android/brotli/build/brotli-1.0.9
+
+      - uses: actions/download-artifact@v4
+        id: deps-bzip2
+        with:
+          name: deps-android-bzip2
+          path: build/android/bzip2/build/bzip2-1.0.8
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/freetype/build.sh
+          ./scripts/android/freetype/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/freetype ${{ env.FREETYPE_VERSION }} ${{ steps.deps-bzip2.outputs.download-path }} ${{ steps.deps-brotli.outputs.download-path }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          FREETYPE_VERSION: ${{ env.FREETYPE_VERSION }}
+      
+      - name: Upload freetype artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-freetype
+          path: build/android/freetype/install
+          overwrite: true
