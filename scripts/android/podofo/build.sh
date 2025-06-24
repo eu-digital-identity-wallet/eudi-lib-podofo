@@ -56,6 +56,9 @@ function prepare() {
 }
 
 function build() {
+    # Create directories if they don't exist
+    mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
+
     echo "Fixing XML_SAVE constants..."
     sed -i 's/XML_SAVE_NO_DECL | XML_SAVE_FORMAT/(int)(XML_SAVE_NO_DECL | XML_SAVE_FORMAT)/' "$BUILD_DIR/podofo/src/podofo/main/PdfXMPPacket.cpp"
 
