@@ -3,6 +3,14 @@ name: Build freetype
 on:
   workflow_dispatch:
     inputs:
+      brotli_version:
+        description: 'brotli version'
+        required: true
+        default: '1.0.9'
+      bzip2_version:
+        description: 'bzip2 version'
+        required: true
+        default: '1.0.8'
       freetype_version:
         description: 'freetype version'
         required: true
@@ -10,9 +18,90 @@ on:
 
 jobs:
 
+  build-android-brotli:
+
+    runs-on: ubuntu-latest
+    env:
+      BROTLI_VERSION: ${{ github.event.inputs.brotli_version || '1.0.9' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout brotli source code
+        uses: actions/checkout@v4
+        with: 
+          repository: google/brotli
+          ref: refs/tags/v${{ env.BROTLI_VERSION }}
+          path: build/android/brotli/build/brotli-${{ env.BROTLI_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+  
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/brotli/build.sh
+          ./scripts/android/brotli/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/brotli ${{ env.BROTLI_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          BROTLI_VERSION: ${{ env.BROTLI_VERSION }}
+        
+      - name: Upload brotli artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-brotli
+          path: build/android/brotli/install
+          overwrite: true
+
+  build-android-bzip2:
+
+    runs-on: ubuntu-latest
+    env:
+      BZIP2_VERSION: ${{ github.event.inputs.bzip2_version || '1.0.8' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract bzip2
+        run: |
+          mkdir -p build/android/bzip2/download/ build/android/bzip2/build/
+          curl -L https://sourceware.org/pub/bzip2/bzip2-${{ env.BZIP2_VERSION }}.tar.gz -o build/android/bzip2/download/bzip2-${{ env.BZIP2_VERSION }}.tar.gz
+          tar -xzf build/android/bzip2/download/bzip2-${{ env.BZIP2_VERSION }}.tar.gz -C build/android/bzip2/build/
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/bzip2/build.sh
+          ./scripts/android/bzip2/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/bzip2 ${{ env.BZIP2_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+      
+      - name: Upload bzip2 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-bzip2
+          path: build/android/bzip2/install
+          overwrite: true
+
   build-android-freetype:
 
     runs-on: ubuntu-latest
+    needs: [build-android-brotli, build-android-bzip2]
     env:
       FREETYPE_VERSION: ${{ github.event.inputs.freetype_version || '2.13.2' }}
 
