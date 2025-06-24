@@ -1,4 +1,4 @@
-name: Build brotli
+name: Build PoDoFo
 
 on:
   workflow_dispatch:
@@ -7,6 +7,26 @@ on:
         description: 'brotli version'
         required: true
         default: '1.0.9'
+      bzip2_version:
+        description: 'bzip2 version'
+        required: true
+        default: '1.0.8'
+      freetype_version:
+        description: 'freetype version'
+        required: true
+        default: '2.13.2'
+      libpng_version:
+        description: 'libpng version'
+        required: true
+        default: '1.6.43'
+      libxml2_version:
+        description: 'libxml2 version'
+        required: true
+        default: '2.12.3'
+      openssl_version:
+        description: 'openssl version'
+        required: true
+        default: '3.2.1'
 
 jobs:
 
@@ -51,4 +71,267 @@ jobs:
         with:
           name: deps-android-brotli
           path: build/android/brotli/install
+          overwrite: true
+
+  build-android-bzip2:
+
+    runs-on: ubuntu-latest
+    env:
+      BZIP2_VERSION: ${{ github.event.inputs.bzip2_version || '1.0.8' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract bzip2
+        run: |
+          mkdir -p build/android/bzip2/download/ build/android/bzip2/build/
+          curl -L https://sourceware.org/pub/bzip2/bzip2-${{ env.BZIP2_VERSION }}.tar.gz -o build/android/bzip2/download/bzip2-${{ env.BZIP2_VERSION }}.tar.gz
+          tar -xzf build/android/bzip2/download/bzip2-${{ env.BZIP2_VERSION }}.tar.gz -C build/android/bzip2/build/
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/bzip2/build.sh
+          ./scripts/android/bzip2/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/bzip2 ${{ env.BZIP2_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+      
+      - name: Upload bzip2 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-bzip2
+          path: build/android/bzip2/install
+          overwrite: true
+
+  build-android-freetype:
+
+    runs-on: ubuntu-latest
+    needs: [build-android-brotli, build-android-bzip2]
+    env:
+      BZIP2_VERSION: ${{ github.event.inputs.bzip2_version || '1.0.8' }}
+      BROTLI_VERSION: ${{ github.event.inputs.brotli_version || '1.0.9' }}
+      FREETYPE_VERSION: ${{ github.event.inputs.freetype_version || '2.13.2' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract freetype
+        run: |
+          mkdir -p build/android/freetype/download/ build/android/freetype/build/
+          curl -L https://download.savannah.gnu.org/releases/freetype/freetype-${{ env.FREETYPE_VERSION }}.tar.gz -o build/android/freetype/download/freetype-${{ env.FREETYPE_VERSION }}.tar.gz
+          tar xzf build/android/freetype/download/freetype-${{ env.FREETYPE_VERSION }}.tar.gz -C build/android/freetype/build/
+      
+      - uses: actions/download-artifact@v4
+        id: deps-brotli
+        with:
+          name: deps-android-brotli
+          path: build/android/brotli/build/brotli-${{ env.BROTLI_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        id: deps-bzip2
+        with:
+          name: deps-android-bzip2
+          path: build/android/bzip2/build/bzip2-${{ env.BZIP2_VERSION }}
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/freetype/build.sh
+          ./scripts/android/freetype/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/freetype ${{ env.FREETYPE_VERSION }} ${{ steps.deps-bzip2.outputs.download-path }} ${{ steps.deps-brotli.outputs.download-path }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          FREETYPE_VERSION: ${{ env.FREETYPE_VERSION }}
+      
+      - name: Upload freetype artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-freetype
+          path: build/android/freetype/install
+          overwrite: true
+
+  build-android-libpng:
+
+    runs-on: ubuntu-latest
+    env:
+      LIBPNG_VERSION: ${{ github.event.inputs.libpng_version || '1.6.43' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract libpng
+        run: |
+          mkdir -p build/android/libpng/download/ build/android/libpng/build/
+          curl -L https://downloads.sourceforge.net/project/libpng/libpng16/${{ env.LIBPNG_VERSION }}/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -o build/android/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz
+          tar -xzf build/android/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -C build/android/libpng/build/
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/libpng/build.sh
+          ./scripts/android/libpng/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/libpng ${{ env.LIBPNG_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          LIBPNG_VERSION: ${{ env.LIBPNG_VERSION }}
+      
+      - name: Upload libpng artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-libpng
+          path: build/android/libpng/install
+          overwrite: true
+
+  build-android-libxml2:
+
+    runs-on: ubuntu-latest
+    env:
+      LIBXML2_VERSION: ${{ github.event.inputs.libxml2_version || '2.12.3'}}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout libxml2 source code
+        uses: actions/checkout@v4
+        with: 
+          repository: GNOME/libxml2
+          ref: refs/tags/v${{ env.LIBXML2_VERSION }}
+          path: build/android/libxml2/build/libxml2-${{ env.LIBXML2_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/libxml2/build.sh
+          ./scripts/android/libxml2/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/libxml2 ${{ env.LIBXML2_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          LIBXML2_VERSION: ${{ env.LIBXML2_VERSION }}
+        
+      - name: Upload libxml2 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-libxml2
+          path: build/android/libxml2/install
+          overwrite: true
+
+  build-android-openssl:
+
+    runs-on: ubuntu-latest
+    env:
+      OPENSSL_VERSION: ${{ github.event.inputs.openssl_version || '3.2.1' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and extract openssl
+        run: |
+          mkdir -p build/android/openssl/download/ build/android/openssl/build/
+          curl -L https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz -o build/android/openssl/download/openssl-${{ env.OPENSSL_VERSION }}.tar.gz
+          tar xzf build/android/openssl/download/openssl-${{ env.OPENSSL_VERSION }}.tar.gz -C build/android/openssl/build/
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+          
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/openssl/build.sh
+          ./scripts/android/openssl/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/openssl ${{ env.OPENSSL_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          OPENSSL_VERSION: ${{ env.OPENSSL_VERSION }}
+        
+      - name: Upload openssl artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-openssl
+          path: build/android/openssl/install
+          overwrite: true
+  
+  build-android-podofo:
+    runs-on: ubuntu-latest
+    needs: [build-android-freetype, build-android-libpng, build-android-libxml2, build-android-openssl]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+    
+      - name: Download freetype artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-freetype
+        with:
+          name: deps-android-freetype
+          path: deps-android/freetype
+
+      - name: Download libpng artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-libpng
+        with:
+          name: deps-android-libpng
+          path: deps-android/libpng
+
+      - name: Download libxml2 artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-libxml2
+        with:
+          name: deps-android-libxml2
+          path: deps-android/libxml2
+
+      - name: Download openssl artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-openssl
+        with:
+          name: deps-android-openssl
+          path: deps-android/openssl
+          
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+
+      - name: Build from source
+        run: |
+          chmod +x scripts/android/podofo/build.sh
+          ./scripts/android/podofo/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/podofo ${{ steps.deps-android-freetype.outputs.download-path }} ${{ steps.deps-android-libpng.outputs.download-path }} ${{ steps.deps-android-libxml2.outputs.download-path }} ${{ steps.deps-android-openssl.outputs.download-path }} 
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+      
+      - name: Upload freetype artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-podofo
+          path: build/android/podofo/install
           overwrite: true
