@@ -325,11 +325,12 @@ jobs:
       - name: Build from source
         run: |
           chmod +x scripts/android/podofo/build.sh
+          mkdir -p build/android/podofo
           ./scripts/android/podofo/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/podofo ${{ steps.deps-android-freetype.outputs.download-path }} ${{ steps.deps-android-libpng.outputs.download-path }} ${{ steps.deps-android-libxml2.outputs.download-path }} ${{ steps.deps-android-openssl.outputs.download-path }} 
         env:
           NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
       
-      - name: Upload freetype artifacts
+      - name: Upload PoDoFo artifacts
         uses: actions/upload-artifact@v4
         with:
           name: deps-android-podofo
