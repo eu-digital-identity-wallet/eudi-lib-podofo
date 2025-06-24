@@ -115,6 +115,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-android-brotli, build-android-bzip2]
     env:
+      BZIP2_VERSION: ${{ github.event.inputs.bzip2_version || '1.0.8' }}
+      BROTLI_VERSION: ${{ github.event.inputs.brotli_version || '1.0.9' }}
       FREETYPE_VERSION: ${{ github.event.inputs.freetype_version || '2.13.2' }}
 
     steps:
@@ -131,13 +133,13 @@ jobs:
         id: deps-brotli
         with:
           name: deps-android-brotli
-          path: build/android/brotli/build/brotli-1.0.9
+          path: build/android/brotli/build/brotli-${{ env.BROTLI_VERSION }}
 
       - uses: actions/download-artifact@v4
         id: deps-bzip2
         with:
           name: deps-android-bzip2
-          path: build/android/bzip2/build/bzip2-1.0.8
+          path: build/android/bzip2/build/bzip2-${{ env.BZIP2_VERSION }}
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
@@ -186,7 +188,7 @@ jobs:
           
       - name: Build from source
         run: |
-          chmod +x scripts/android/brotli/build.sh
+          chmod +x scripts/android/libpng/build.sh
           ./scripts/android/libpng/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/libpng ${{ env.LIBPNG_VERSION }} --skip-prepare
         env:
           NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
@@ -284,3 +286,35 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+    
+      - name: Download freetype artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deps-android-freetype
+          path: deps-android/freetype
+
+      - name: Download libpng artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deps-android-libpng
+          path: deps-android/libpng
+
+      - name: Download libxml2 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deps-android-libxml2
+          path: deps-android/libxml2
+
+      - name: Download openssl artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deps-android-openssl
+          path: deps-android/openssl
+          
+      - name: Create zip package
+        run: |
+          mkdir -p package
+          cp -r deps-android/* package/
+          cd package
+          zip -r ../android-deps-package.zip .
+        shell: bash

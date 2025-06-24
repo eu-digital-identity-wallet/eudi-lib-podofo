@@ -86,6 +86,7 @@ function build() {
         echo "Generating configure script..."
         cd "$BUILD_DIR/libxml2-$LIBXML_VERSION"
         ./autogen.sh
+        make distclean
         cd "$TARGET_DIR"
     fi
 
