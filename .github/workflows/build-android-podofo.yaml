@@ -27,6 +27,14 @@ on:
         description: "openssl version"
         required: true
         default: "3.2.1"
+      harfbuzz_version:
+        description: "harfbuzz version"
+        required: true
+        default: "11.2.1"
+      zlib_version:
+        description: "zlib version"
+        required: true
+        default: "1.2.13"
 
 jobs:
   build-android-brotli:
@@ -334,6 +342,106 @@ jobs:
           path: build/android/openssl/install
           overwrite: true
 
+  build-android-harfbuzz:
+    runs-on: ubuntu-latest
+    env:
+      HARFBUZZ_VERSION: ${{ github.event.inputs.harfbuzz_version || '11.2.1' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache harfbuzz build
+        id: cache-android-harfbuzz
+        uses: actions/cache@v4
+        with:
+          path: build/android/harfbuzz/install
+          key: deps-android-harfbuzz-${{ env.HARFBUZZ_VERSION }}
+
+      - name: Install CMake
+        if: steps.cache-android-harfbuzz.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Checkout harfbuzz source code
+        uses: actions/checkout@v4
+        with:
+          repository: harfbuzz/harfbuzz
+          ref: refs/tags/${{ env.HARFBUZZ_VERSION }}
+          path: build/android/harfbuzz/build/harfbuzz
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        if: steps.cache-android-harfbuzz.outputs.cache-hit != 'true'
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+
+      - name: Build from source
+        if: steps.cache-android-harfbuzz.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/android/harfbuzz/build.sh
+          ./scripts/android/harfbuzz/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/harfbuzz ${{ env.HARFBUZZ_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          HARFBUZZ_VERSION: ${{ env.HARFBUZZ_VERSION }}
+
+      - name: Upload harfbuzz artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-harfbuzz
+          path: build/android/harfbuzz/install
+          overwrite: true
+
+  build-android-zlib:
+    runs-on: ubuntu-latest
+    env:
+      ZLIB_VERSION: ${{ github.event.inputs.zlib_version || '1.2.13' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache zlib build
+        id: cache-android-zlib
+        uses: actions/cache@v4
+        with:
+          path: build/android/zlib/install
+          key: deps-android-zlib-${{ env.ZLIB_VERSION }}
+
+      - name: Checkout zlib source code
+        uses: actions/checkout@v4
+        with:
+          repository: madler/zlib
+          ref: refs/tags/v${{ env.ZLIB_VERSION }}
+          path: build/android/zlib/download/zlib-${{ env.ZLIB_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        if: steps.cache-android-zlib.outputs.cache-hit != 'true'
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+
+      - name: Build from source
+        if: steps.cache-android-zlib.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/android/zlib/build.sh
+          ./scripts/android/zlib/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/zlib ${{ env.ZLIB_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ZLIB_VERSION: ${{ env.ZLIB_VERSION }}
+
+      - name: Upload zlib artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-zlib
+          path: build/android/zlib/install
+          overwrite: true
+
   build-android-podofo:
     runs-on: ubuntu-latest
     needs:
@@ -342,6 +450,8 @@ jobs:
         build-android-libpng,
         build-android-libxml2,
         build-android-openssl,
+        build-android-harfbuzz,
+        build-android-zlib,
       ]
 
     steps:
