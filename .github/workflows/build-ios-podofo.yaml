@@ -1,0 +1,69 @@
+name: Build PoDoFo for iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      freetype_version:
+        description: "freetype version"
+        required: true
+        default: "2.13.2"
+      libpng_version:
+        description: "libpng version"
+        required: true
+        default: "1.6.43"
+      libxml2_version:
+        description: "libxml2 version"
+        required: true
+        default: "2.12.3"
+      openssl_version:
+        description: "openssl version"
+        required: true
+        default: "3.2.1"
+
+jobs:
+  build-ios-freetype:
+    runs-on: macos-latest
+    env:
+      FREETYPE_VERSION: ${{ github.event.inputs.freetype_version || '2.13.2' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+  build-ios-libpng:
+    runs-on: macos-latest
+    env:
+      LIBPNG_VERSION: ${{ github.event.inputs.libpng_version || '1.6.43' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+  build-ios-libxml2:
+    runs-on: macos-latest
+    env:
+      LIBXML2_VERSION: ${{ github.event.inputs.libxml2_version || '2.12.3'}}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+  build-ios-openssl:
+    runs-on: macos-latest
+    env:
+      OPENSSL_VERSION: ${{ github.event.inputs.openssl_version || '3.2.1' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+  build-ios-podofo:
+    runs-on: macos-latest
+    needs:
+      [
+        build-ios-freetype,
+        build-ios-libpng,
+        build-ios-libxml2,
+        build-ios-openssl,
+      ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
