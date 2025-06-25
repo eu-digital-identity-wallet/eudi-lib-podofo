@@ -205,7 +205,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache libpng build
+        id: cache-android-libpng
+        uses: actions/cache@v4
+        with:
+          path: build/android/libpng/install
+          key: deps-android-libpng-${{ env.LIBPNG_VERSION }}
+        
       - name: Download and extract libpng
+        if: steps.cache-android-libpng.outputs.cache-hit != 'true'
         run: |
           mkdir -p build/android/libpng/download/ build/android/libpng/build/
           curl -L https://downloads.sourceforge.net/project/libpng/libpng16/${{ env.LIBPNG_VERSION }}/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -o build/android/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz
@@ -213,12 +221,14 @@ jobs:
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
+        if: steps.cache-android-libpng.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
           ndk-version: r27c
           local-cache: true
           
       - name: Build from source
+        if: steps.cache-android-libpng.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/android/libpng/build.sh
           ./scripts/android/libpng/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/libpng ${{ env.LIBPNG_VERSION }} --skip-prepare
@@ -243,8 +253,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache libxml2 build
+        id: cache-android-libxml2
+        uses: actions/cache@v4
+        with:
+          path: build/android/libxml2/install
+          key: deps-android-libxml2-${{ env.LIBXML2_VERSION }}
+        
       - name: Checkout libxml2 source code
         uses: actions/checkout@v4
+        if: steps.cache-android-libxml2.outputs.cache-hit != 'true'
         with: 
           repository: GNOME/libxml2
           ref: refs/tags/v${{ env.LIBXML2_VERSION }}
@@ -253,12 +271,14 @@ jobs:
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
+        if: steps.cache-android-libxml2.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
           ndk-version: r27c
           local-cache: true
           
       - name: Build from source
+        if: steps.cache-android-libxml2.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/android/libxml2/build.sh
           ./scripts/android/libxml2/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/libxml2 ${{ env.LIBXML2_VERSION }} --skip-prepare
@@ -283,7 +303,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache openssl build
+        id: cache-android-openssl
+        uses: actions/cache@v4
+        with:
+          path: build/android/openssl/install
+          key: deps-android-openssl-${{ env.OPENSSL_VERSION }}
+        
       - name: Download and extract openssl
+        if: steps.cache-android-openssl.outputs.cache-hit != 'true'
         run: |
           mkdir -p build/android/openssl/download/ build/android/openssl/build/
           curl -L https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz -o build/android/openssl/download/openssl-${{ env.OPENSSL_VERSION }}.tar.gz
@@ -291,12 +319,14 @@ jobs:
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
+        if: steps.cache-android-openssl.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
           ndk-version: r27c
           local-cache: true
           
       - name: Build from source
+        if: steps.cache-android-openssl.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/android/openssl/build.sh
           ./scripts/android/openssl/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/openssl ${{ env.OPENSSL_VERSION }} --skip-prepare
@@ -362,7 +392,7 @@ jobs:
         env:
           NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
       
-      - name: Upload freetype artifacts
+      - name: Upload podofo artifacts
         uses: actions/upload-artifact@v4
         with:
           name: deps-android-podofo
