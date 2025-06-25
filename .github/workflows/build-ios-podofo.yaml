@@ -6,15 +6,15 @@ on:
       freetype_version:
         description: "freetype version"
         required: true
-        default: "2.13.2"
+        default: "2.13.3"
       libpng_version:
         description: "libpng version"
         required: true
-        default: "1.6.43"
+        default: "1.6.48"
       libxml2_version:
         description: "libxml2 version"
         required: true
-        default: "2.12.3"
+        default: "2.11.5"
       openssl_version:
         description: "openssl version"
         required: true
@@ -24,28 +24,117 @@ jobs:
   build-ios-freetype:
     runs-on: macos-latest
     env:
-      FREETYPE_VERSION: ${{ github.event.inputs.freetype_version || '2.13.2' }}
+      FREETYPE_VERSION: ${{ github.event.inputs.freetype_version || '2.13.3' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Cache freetype build
+        id: cache-ios-freetype
+        uses: actions/cache@v4
+        with:
+          path: build/ios/freetype/install
+          key: deps-ios-freetype-${{ env.FREETYPE_VERSION }}
+
+      - name: Download and extract freetype
+        if: steps.cache-ios-freetype.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p build/ios/freetype/download/ build/ios/freetype/build/
+          curl -L https://download.savannah.gnu.org/releases/freetype/freetype-${{ env.FREETYPE_VERSION }}.tar.gz -o build/ios/freetype/download/freetype-${{ env.FREETYPE_VERSION }}.tar.gz
+          tar xzf build/ios/freetype/download/freetype-${{ env.FREETYPE_VERSION }}.tar.gz -C build/ios/freetype/build/
+
+      - name: Build from source
+        if: steps.cache-ios-freetype.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/ios/freetype/build.sh
+          ./scripts/ios/freetype/build.sh build/ios/freetype ${{ env.FREETYPE_VERSION }}
+        env:
+          FREETYPE_VERSION: ${{ env.FREETYPE_VERSION }}
+
+      - name: Upload freetype artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-ios-freetype
+          path: build/ios/freetype/install
+          overwrite: true
 
   build-ios-libpng:
     runs-on: macos-latest
     env:
-      LIBPNG_VERSION: ${{ github.event.inputs.libpng_version || '1.6.43' }}
+      LIBPNG_VERSION: ${{ github.event.inputs.libpng_version || '1.6.48' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache libpng build
+        id: cache-ios-libpng
+        uses: actions/cache@v4
+        with:
+          path: build/ios/libpng/install
+          key: deps-ios-libpng-${{ env.LIBPNG_VERSION }}
+
+      - name: Download and extract libpng
+        if: steps.cache-ios-libpng.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p build/ios/libpng/download/ build/ios/libpng/build/
+          curl -L https://downloads.sourceforge.net/project/libpng/libpng16/${{ env.LIBPNG_VERSION }}/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -o build/ios/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz
+          tar -xzf build/ios/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -C build/ios/libpng/build/
+
+      - name: Build from source
+        if: steps.cache-ios-libpng.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/ios/libpng/build.sh
+          ./scripts/ios/libpng/build.sh build/ios/libpng ${{ env.LIBPNG_VERSION }} --skip-prepare
+        env:
+          LIBPNG_VERSION: ${{ env.LIBPNG_VERSION }}
+
+      - name: Upload libpng artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-ios-libpng
+          path: build/ios/libpng/install
+          overwrite: true
+
   build-ios-libxml2:
     runs-on: macos-latest
     env:
-      LIBXML2_VERSION: ${{ github.event.inputs.libxml2_version || '2.12.3'}}
+      LIBXML2_VERSION: ${{ github.event.inputs.libxml2_version || '2.11.5'}}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         
+      - name: Cache libxml2 build
+        id: cache-ios-libxml2
+        uses: actions/cache@v4
+        with:
+          path: build/ios/libxml2/install
+          key: deps-ios-libxml2-${{ env.LIBXML2_VERSION }}
+
+      - name: Checkout libxml2 source code
+        uses: actions/checkout@v4
+        if: steps.cache-ios-libxml2.outputs.cache-hit != 'true'
+        with:
+          repository: GNOME/libxml2
+          ref: refs/tags/v${{ env.LIBXML2_VERSION }}
+          path: build/ios/libxml2/build/libxml2-${{ env.LIBXML2_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build from source
+        if: steps.cache-ios-libxml2.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/ios/libxml2/build.sh
+          ./scripts/ios/libxml2/build.sh build/ios/libxml2 ${{ env.LIBXML2_VERSION }} --skip-prepare
+        env:
+          LIBXML2_VERSION: ${{ env.LIBXML2_VERSION }}
+
+      - name: Upload libxml2 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-ios-libxml2
+          path: build/ios/libxml2/install
+          overwrite: true
+
   build-ios-openssl:
     runs-on: macos-latest
     env:
@@ -53,6 +142,35 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Cache openssl build
+        id: cache-ios-openssl
+        uses: actions/cache@v4
+        with:
+          path: build/ios/openssl/install
+          key: deps-ios-openssl-${{ env.OPENSSL_VERSION }}
+
+      - name: Download and extract openssl
+        if: steps.cache-ios-openssl.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p build/ios/openssl/download/ build/ios/openssl/build/
+          curl -L https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz -o build/ios/openssl/download/openssl-${{ env.OPENSSL_VERSION }}.tar.gz
+          tar xzf build/ios/openssl/download/openssl-${{ env.OPENSSL_VERSION }}.tar.gz -C build/ios/openssl/build/
+
+      - name: Build from source
+        if: steps.cache-ios-openssl.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/ios/openssl/build.sh
+          ./scripts/ios/openssl/build.sh build/ios/openssl ${{ env.OPENSSL_VERSION }} --skip-prepare
+        env:
+          OPENSSL_VERSION: ${{ env.OPENSSL_VERSION }}
+
+      - name: Upload openssl artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-ios-openssl
+          path: build/ios/openssl/install
+          overwrite: true
 
   build-ios-podofo:
     runs-on: macos-latest
@@ -67,3 +185,44 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        
+      - name: Download freetype artifact
+        uses: actions/download-artifact@v4
+        id: deps-ios-freetype
+        with:
+          name: deps-ios-freetype
+          path: deps-ios/freetype
+
+      - name: Download libpng artifact
+        uses: actions/download-artifact@v4
+        id: deps-ios-libpng
+        with:
+          name: deps-ios-libpng
+          path: deps-ios/libpng
+
+      - name: Download libxml2 artifact
+        uses: actions/download-artifact@v4
+        id: deps-ios-libxml2
+        with:
+          name: deps-ios-libxml2
+          path: deps-ios/libxml2
+
+      - name: Download openssl artifact
+        uses: actions/download-artifact@v4
+        id: deps-ios-openssl
+        with:
+          name: deps-ios-openssl
+          path: deps-ios/openssl
+
+      - name: Build from source
+        run: |
+          chmod +x scripts/ios/podofo/build.sh
+          mkdir -p build/ios/podofo
+          ./scripts/ios/podofo/build.sh build/ios/podofo ${{ steps.deps-ios-freetype.outputs.download-path }} ${{ steps.deps-ios-libpng.outputs.download-path }} ${{ steps.deps-ios-libxml2.outputs.download-path }} ${{ steps.deps-ios-openssl.outputs.download-path }}
+
+      - name: Upload podofo artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-ios-podofo
+          path: build/ios/podofo/install
+          overwrite: true
