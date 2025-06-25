@@ -109,7 +109,6 @@ function build() {
         ./Configure $TARGET \
             --prefix="$INSTALL_DIR/$ABI" \
             --openssldir="$INSTALL_DIR/$ABI" \
-            shared \
             threads \
             -D__ANDROID_API__=$API_LEVEL
 

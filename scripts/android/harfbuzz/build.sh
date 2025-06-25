@@ -122,8 +122,7 @@ function build() {
             -DHB_HAVE_ICU=OFF \
             -DHB_BUILD_TESTS=OFF \
             -DHB_BUILD_UTILS=OFF \
-            -DHB_BUILD_SUBSET=OFF \
-            -DBUILD_SHARED_LIBS=ON
+            -DHB_BUILD_SUBSET=OFF
         
         # Build and install
         make -j$(nproc)
@@ -139,7 +138,7 @@ function build() {
     echo "Creating CMake configuration..."
     cat > "$INSTALL_DIR/harfbuzz-config.cmake" << EOF
 set(HARFBUZZ_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/include")
-set(HARFBUZZ_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libharfbuzz.so")
+set(HARFBUZZ_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libharfbuzz.a")
 set(HARFBUZZ_FOUND TRUE)
 EOF
 

@@ -60,39 +60,19 @@ function check() {
 }
 
 function prepare() {
-    # Download zlib if not present
-    if [ ! -d "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION" ]; then
+    # Create directories if they don't exist
+    mkdir -p "$BUILD_DIR" "$DOWNLOAD_DIR"
+
+    # Download zlib if not already present
+    if [ ! -f "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION.tar.gz" ]; then
         echo "Downloading zlib..."
-        mkdir -p "$DOWNLOAD_DIR"
-        cd "$DOWNLOAD_DIR"
-        
-        # Try multiple mirrors
-        for URL in \
-            "https://github.com/madler/zlib/archive/refs/tags/v$ZLIB_VERSION.tar.gz" \
-            "https://zlib.net/zlib-$ZLIB_VERSION.tar.gz" \
-            "https://www.zlib.net/zlib-$ZLIB_VERSION.tar.gz"
-        do
-            echo "Trying to download from $URL"
-            if curl -L -o zlib-$ZLIB_VERSION.tar.gz "$URL" && [ -s zlib-$ZLIB_VERSION.tar.gz ]; then
-                echo "Download successful"
-                break
-            fi
-            echo "Download failed, trying next mirror..."
-        done
-        
-        # Verify the downloaded file
-        if [ ! -s zlib-$ZLIB_VERSION.tar.gz ]; then
-            echo "Error: Failed to download zlib"
-            exit 1
-        fi
-        
+        curl -L "https://github.com/madler/zlib/archive/refs/tags/v$ZLIB_VERSION.tar.gz" -o "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION.tar.gz"
+    fi
+
+    # Extract zlib if not already extracted
+    if [ ! -d "$BUILD_DIR/zlib-$ZLIB_VERSION" ]; then
         echo "Extracting zlib..."
-        tar xzf zlib-$ZLIB_VERSION.tar.gz
-        if [ ! -d "zlib-$ZLIB_VERSION" ]; then
-            echo "Error: Failed to extract zlib archive"
-            exit 1
-        fi
-        cd ..
+        tar xzf "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION.tar.gz" -C "$BUILD_DIR"
     fi
 }
 
@@ -105,98 +85,83 @@ function build() {
     for ABI in "${ARCHS[@]}"; do
         echo "Building for $ABI..."
         
-        # Set up toolchain
-        case "$ABI" in
+        # Set up toolchain and compiler
+        case $ABI in
             "arm64-v8a")
-                TOOLCHAIN="$NDK_DIR/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android$API_LEVEL-clang"
-                AR="$NDK_DIR/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+                HOST="aarch64-linux-android"
                 ;;
             "armeabi-v7a")
-                TOOLCHAIN="$NDK_DIR/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi$API_LEVEL-clang"
-                AR="$NDK_DIR/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+                HOST="armv7a-linux-androideabi"
                 ;;
             "x86")
-                TOOLCHAIN="$NDK_DIR/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android$API_LEVEL-clang"
-                AR="$NDK_DIR/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+                HOST="i686-linux-android"
                 ;;
             "x86_64")
-                TOOLCHAIN="$NDK_DIR/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android$API_LEVEL-clang"
-                AR="$NDK_DIR/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+                HOST="x86_64-linux-android"
                 ;;
         esac
-
-        # Create build directory
-        BUILD_DIR_ARCH="$BUILD_DIR/$ABI"
-        rm -rf "$BUILD_DIR_ARCH"
-        mkdir -p "$BUILD_DIR_ARCH"
-        cp -r "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION/"* "$BUILD_DIR_ARCH/"
-        cd "$BUILD_DIR_ARCH"
-
-        # Configure and build
-        export CC="$TOOLCHAIN"
-        export AR="$AR"
-        export CFLAGS="-fPIC -O3"
-        export LDFLAGS="-shared"
         
-        ./configure --prefix="$INSTALL_DIR/$ABI"
+        # Set up compiler and tools
+        CC="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin/${HOST}${API_LEVEL}-clang"
+        CXX="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin/${HOST}${API_LEVEL}-clang++"
+        AR="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+        RANLIB="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib"
+        STRIP="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+        
+        # Set up sysroot
+        SYSROOT="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+        
+        # Create build directory for this architecture
+        ARCH_BUILD_DIR="$BUILD_DIR/$ABI"
+        mkdir -p "$ARCH_BUILD_DIR"
+        cd "$ARCH_BUILD_DIR"
+        
+        # Copy source files
+        cp -r "$BUILD_DIR/zlib-$ZLIB_VERSION"/* .
+        
+        # Configure zlib for cross-compilation
+        CHOST="$HOST" \
+        CC="$CC" \
+        CFLAGS="-fPIC -O3" \
+        ./configure --static --prefix="$INSTALL_DIR/$ABI"
+        
+        # Build and install
         make clean
+        make
+        make install
         
-        # Build object files
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o adler32.o adler32.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o crc32.o crc32.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o deflate.o deflate.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o infback.o infback.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o inffast.o inffast.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o inflate.o inflate.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o inftrees.o inftrees.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o trees.o trees.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o zutil.o zutil.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o compress.o compress.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o uncompr.o uncompr.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o gzclose.o gzclose.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o gzlib.o gzlib.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o gzread.o gzread.c
-        $CC $CFLAGS -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. -c -o gzwrite.o gzwrite.c
-        
-        # Create shared library
-        $CC -shared -Wl,-soname,libz.so.1 -o libz.so.$ZLIB_VERSION *.o
-        ln -sf libz.so.$ZLIB_VERSION libz.so.1
-        ln -sf libz.so.1 libz.so
-        
-        # Install
-        mkdir -p "$INSTALL_DIR/$ABI/lib" "$INSTALL_DIR/$ABI/include"
-        cp libz.so* "$INSTALL_DIR/$ABI/lib/"
-        cp zlib.h zconf.h "$INSTALL_DIR/$ABI/include/"
-        
-        # Create CMake config
-        mkdir -p "$INSTALL_DIR/$ABI/lib/cmake/zlib"
-        cat > "$INSTALL_DIR/$ABI/lib/cmake/zlib/zlib-config.cmake" << EOF
-set(ZLIB_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../include")
-set(ZLIB_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/libz.so")
+        echo "Build completed for $ABI"
+    done
+
+    echo "Build completed successfully!"
+    echo "Libraries are installed in: $INSTALL_DIR"
+
+    # Create a CMake configuration file
+    echo "Creating CMake configuration..."
+    cat > "$INSTALL_DIR/zlib-config.cmake" << EOF
+set(ZLIB_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/include")
+set(ZLIB_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libz.a")
+set(ZLIB_FOUND TRUE)
 EOF
 
-        # Create pkg-config file
-        mkdir -p "$INSTALL_DIR/$ABI/lib/pkgconfig"
-        cat > "$INSTALL_DIR/$ABI/lib/pkgconfig/zlib.pc" << EOF
-prefix=$INSTALL_DIR/$ABI
+    # Create a pkg-config file
+    echo "Creating pkg-config file..."
+    cat > "$INSTALL_DIR/zlib.pc" << EOF
+prefix=$INSTALL_DIR
 exec_prefix=\${prefix}
 libdir=\${exec_prefix}/lib
-sharedlibdir=\${libdir}
 includedir=\${prefix}/include
 
 Name: zlib
-Description: zlib compression library
+Description: A Massively Spiffy Yet Delicately Unobtrusive Compression Library
 Version: $ZLIB_VERSION
-
-Requires:
-Libs: -L\${libdir} -L\${sharedlibdir} -lz
+Libs: -L\${libdir} -lz
+Libs.private: -lz
 Cflags: -I\${includedir}
 EOF
 
-        cd ../..
-    done
-
-    echo "Build completed. Libraries installed in $INSTALL_DIR"
+    echo "Installation completed successfully!"
+    echo "CMake and pkg-config files are available in: $INSTALL_DIR"
 }
 
 check

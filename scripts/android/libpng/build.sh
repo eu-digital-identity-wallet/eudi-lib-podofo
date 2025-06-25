@@ -119,12 +119,10 @@ function build() {
         "$BUILD_DIR/libpng-$LIBPNG_VERSION/configure" \
             --host="$HOST" \
             --prefix="$INSTALL_DIR/$ABI" \
-            --disable-static \
-            --enable-shared \
+            --enable-static \
+            --disable-shared \
             --with-pic \
             --with-sysroot="$SYSROOT" \
-            --disable-tools \
-            --disable-tests \
             CC="$CC" \
             CXX="$CXX" \
             AR="$AR" \
@@ -137,15 +135,15 @@ function build() {
         # Clean previous build
         make clean
         
-        # Build the shared library
-        make
+        # Build only the library
+        make libpng16.la
         
         # Install library and headers
-        make install
+        make install-libLTLIBRARIES install-data-am
         
-        # Create symlink for libpng.so
+        # Create symlink for libpng.a
         cd "$INSTALL_DIR/$ABI/lib"
-        ln -sf libpng16.so libpng.so
+        ln -sf libpng16.a libpng.a
         
         echo "Build completed for $ABI"
     done
@@ -157,7 +155,7 @@ function build() {
     echo "Creating CMake configuration..."
     cat > "$INSTALL_DIR/libpng-config.cmake" << EOF
 set(LIBPNG_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/include")
-set(LIBPNG_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libpng16.so")
+set(LIBPNG_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libpng16.a")
 set(LIBPNG_FOUND TRUE)
 EOF
 
