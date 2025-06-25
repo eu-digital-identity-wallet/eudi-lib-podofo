@@ -1,4 +1,4 @@
-name: Build PoDoFo
+name: Build PoDoFo for Android
 
 on:
   workflow_dispatch:
@@ -40,6 +40,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache brotli build
+        id: cache-android-brotli
+        uses: actions/cache@v4
+        with:
+          path: build/android/brotli/install
+          key: deps-android-brotli-${{ env.BROTLI_VERSION }}
+          
       - name: Checkout brotli source code
         uses: actions/checkout@v4
         with: 
@@ -49,16 +56,19 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install CMake
+        if: steps.cache-android-brotli.outputs.cache-hit != 'true'
         run: sudo apt-get update && sudo apt-get install -y cmake
   
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
+        if: steps.cache-android-brotli.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
           ndk-version: r27c
           local-cache: true
           
       - name: Build from source
+        if: steps.cache-android-brotli.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/android/brotli/build.sh
           ./scripts/android/brotli/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/brotli ${{ env.BROTLI_VERSION }} --skip-prepare
@@ -83,7 +93,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache bzip2 build
+        id: cache-android-bzip2
+        uses: actions/cache@v4
+        with:
+          path: build/android/bzip2/install
+          key: deps-android-bzip2-${{ env.BZIP2_VERSION }}
+        
       - name: Download and extract bzip2
+        if: steps.cache-android-bzip2.outputs.cache-hit != 'true'
         run: |
           mkdir -p build/android/bzip2/download/ build/android/bzip2/build/
           curl -L https://sourceware.org/pub/bzip2/bzip2-${{ env.BZIP2_VERSION }}.tar.gz -o build/android/bzip2/download/bzip2-${{ env.BZIP2_VERSION }}.tar.gz
@@ -91,12 +109,14 @@ jobs:
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
+        if: steps.cache-android-bzip2.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
           ndk-version: r27c
           local-cache: true
           
       - name: Build from source
+        if: steps.cache-android-bzip2.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/android/bzip2/build.sh
           ./scripts/android/bzip2/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/bzip2 ${{ env.BZIP2_VERSION }} --skip-prepare
@@ -123,19 +143,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache freetype build
+        id: cache-android-freetype
+        uses: actions/cache@v4
+        with:
+          path: build/android/freetype/install
+          key: deps-android-freetype-${{ env.FREETYPE_VERSION }}
+        
       - name: Download and extract freetype
+        if: steps.cache-android-freetype.outputs.cache-hit != 'true'
         run: |
           mkdir -p build/android/freetype/download/ build/android/freetype/build/
           curl -L https://download.savannah.gnu.org/releases/freetype/freetype-${{ env.FREETYPE_VERSION }}.tar.gz -o build/android/freetype/download/freetype-${{ env.FREETYPE_VERSION }}.tar.gz
           tar xzf build/android/freetype/download/freetype-${{ env.FREETYPE_VERSION }}.tar.gz -C build/android/freetype/build/
       
       - uses: actions/download-artifact@v4
+        if: steps.cache-android-freetype.outputs.cache-hit != 'true'
         id: deps-brotli
         with:
           name: deps-android-brotli
           path: build/android/brotli/build/brotli-${{ env.BROTLI_VERSION }}
 
       - uses: actions/download-artifact@v4
+        if: steps.cache-android-freetype.outputs.cache-hit != 'true'
         id: deps-bzip2
         with:
           name: deps-android-bzip2
@@ -143,12 +173,14 @@ jobs:
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
+        if: steps.cache-android-freetype.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
           ndk-version: r27c
           local-cache: true
           
       - name: Build from source
+        if: steps.cache-android-freetype.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/android/freetype/build.sh
           ./scripts/android/freetype/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/freetype ${{ env.FREETYPE_VERSION }} ${{ steps.deps-bzip2.outputs.download-path }} ${{ steps.deps-brotli.outputs.download-path }} --skip-prepare
@@ -330,7 +362,7 @@ jobs:
         env:
           NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
       
-      - name: Upload PoDoFo artifacts
+      - name: Upload freetype artifacts
         uses: actions/upload-artifact@v4
         with:
           name: deps-android-podofo
