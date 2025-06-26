@@ -513,7 +513,7 @@ jobs:
 
   build-android-podofo-aar:
     runs-on: ubuntu-latest
-    # needs: build-android-podofo
+    needs: build-android-podofo
 
     steps:
       - name: Checkout repository
