@@ -597,7 +597,8 @@ jobs:
         run: |
           chmod +x scripts/android/podofo-aar/build.sh
           ./scripts/android/podofo-aar/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} src/wrapper build/android/aar
-          cp -r build/android/aar/build/jni/* src/android/src/main/jniLibs
+          mkdir -p src/android/src/main/jniLibs
+          cp -r build/android/aar/build/jni/* src/android/src/main/jniLibs/
         env:
           NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
 
