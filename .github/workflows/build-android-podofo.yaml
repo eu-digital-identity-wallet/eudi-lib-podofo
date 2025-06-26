@@ -493,6 +493,9 @@ jobs:
           ndk-version: r27c
           local-cache: true
 
+      - name: Install CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake rsync
+
       - name: Build from source
         run: |
           chmod +x scripts/android/podofo/build.sh
@@ -506,4 +509,117 @@ jobs:
         with:
           name: deps-android-podofo
           path: build/android/podofo/install
+          overwrite: true
+
+  build-android-podofo-aar:
+    runs-on: ubuntu-latest
+    # needs: build-android-podofo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        id: deps-android-brotli
+        with:
+          name: deps-android-brotli
+          path: deps-android/brotli
+
+      - uses: actions/download-artifact@v4
+        id: deps-android-bzip2
+        with:
+          name: deps-android-bzip2
+          path: deps-android/bzip2
+
+      - name: Download freetype artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-freetype
+        with:
+          name: deps-android-freetype
+          path: deps-android/freetype
+
+      - name: Download harfbuzz artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-harfbuzz
+        with:
+          name: deps-android-harfbuzz
+          path: deps-android/harfbuzz
+
+      - name: Download libpng artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-libpng
+        with:
+          name: deps-android-libpng
+          path: deps-android/libpng
+
+      - name: Download libxml2 artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-libxml2
+        with:
+          name: deps-android-libxml2
+          path: deps-android/libxml2
+
+      - name: Download openssl artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-openssl
+        with:
+          name: deps-android-openssl
+          path: deps-android/openssl
+
+      - name: Download podofo artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-podofo
+        with:
+          name: deps-android-podofo
+          path: deps-android/podofo
+
+      - name: Download zlib artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-zlib
+        with:
+          name: deps-android-zlib
+          path: deps-android/zlib
+
+      - name: Organize libs
+        run: |
+          chmod +x scripts/android/podofo-aar/build.sh
+          mkdir -p build/android/aar
+          ./scripts/android/podofo-aar/organize_libs.sh ${{ steps.deps-android-brotli.outputs.download-path }} ${{ steps.deps-android-bzip2.outputs.download-path }} ${{ steps.deps-android-freetype.outputs.download-path }} ${{ steps.deps-android-harfbuzz.outputs.download-path }} ${{ steps.deps-android-libpng.outputs.download-path }} ${{ steps.deps-android-libxml2.outputs.download-path }} ${{ steps.deps-android-openssl.outputs.download-path }} ${{ steps.deps-android-podofo.outputs.download-path }} ${{ steps.deps-android-zlib.outputs.download-path }} build/android/aar
+      
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+
+      - name: Build wrapper
+        run: |
+          chmod +x scripts/android/podofo-aar/build.sh
+          ./scripts/android/podofo-aar/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} src/wrapper build/android/aar
+          cp -r build/android/aar/jni src/android/src/main/jniLibs
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build with Gradle Wrapper
+        run: |
+          cd src/android  
+          ./gradlew build
+
+      - name: Upload podofo AAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-podofo-aar
+          path: src/android/build/outputs/aar/podofo-release.aar
           overwrite: true
