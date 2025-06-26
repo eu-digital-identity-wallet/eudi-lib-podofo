@@ -415,7 +415,7 @@ jobs:
         with:
           repository: madler/zlib
           ref: refs/tags/v${{ env.ZLIB_VERSION }}
-          path: build/android/zlib/download/zlib-${{ env.ZLIB_VERSION }}
+          path: build/android/zlib/build/zlib-${{ env.ZLIB_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Android NDK
@@ -597,7 +597,7 @@ jobs:
         run: |
           chmod +x scripts/android/podofo-aar/build.sh
           ./scripts/android/podofo-aar/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} src/wrapper build/android/aar
-          cp -r build/android/aar/jni src/android/src/main/jniLibs
+          cp -r build/android/aar/build/jni/* src/android/src/main/jniLibs
         env:
           NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
 
@@ -606,20 +606,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Validate Gradle Wrapper
-        uses: gradle/actions/wrapper-validation@v4
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Build with Gradle Wrapper
         run: |
           cd src/android  
-          ./gradlew build
+          ./gradlew --no-daemon build
 
       - name: Upload podofo AAR artifact
         uses: actions/upload-artifact@v4
         with:
-          name: deps-android-podofo-aar
-          path: src/android/build/outputs/aar/podofo-release.aar
+          name: android-podofo-aar
+          path: src/android/build/outputs/aar/eudi-lib-podofo-android-relase.aar
           overwrite: true

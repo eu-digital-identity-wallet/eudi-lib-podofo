@@ -147,50 +147,51 @@ ARCHS=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
 for ARCH in "${ARCHS[@]}"; do
     # Create directories if they don't exist
     mkdir -p "$TARGET_PATH/install/$ARCH/lib"
-    mkdir -p "$TARGET_PATH/install/$ARCH/include"
 
     # Copy PoDoFo libraries
-    cp "$PODOFO_BASE_DIR/install/$ARCH/lib/libpodofo.a" "$TARGET_PATH/install/$ARCH/lib/"
-    cp "$PODOFO_BASE_DIR/install/$ARCH/lib/libpodofo_private.a" "$TARGET_PATH/install/$ARCH/lib/"
-    cp "$PODOFO_BASE_DIR/install/$ARCH/lib/libpodofo_3rdparty.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$PODOFO_BASE_DIR/$ARCH/lib/libpodofo.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$PODOFO_BASE_DIR/$ARCH/lib/libpodofo_private.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$PODOFO_BASE_DIR/$ARCH/lib/libpodofo_3rdparty.a" "$TARGET_PATH/install/$ARCH/lib/"
 
     # Copy Brotli libraries (just copy them individually)
-    cp "$BROTLI_BASE_DIR/install/$ARCH/lib/libbrotlicommon-static.a" "$TARGET_PATH/install/$ARCH/lib/libbrotli.a"
-    cp "$BROTLI_BASE_DIR/install/$ARCH/lib/libbrotlidec-static.a" "$TARGET_PATH/install/$ARCH/lib/libbrotlidec.a"
-    cp "$BROTLI_BASE_DIR/install/$ARCH/lib/libbrotlienc-static.a" "$TARGET_PATH/install/$ARCH/lib/libbrotlienc.a"
+    cp "$BROTLI_BASE_DIR/$ARCH/lib/libbrotlicommon-static.a" "$TARGET_PATH/install/$ARCH/lib/libbrotli.a"
+    cp "$BROTLI_BASE_DIR/$ARCH/lib/libbrotlidec-static.a" "$TARGET_PATH/install/$ARCH/lib/libbrotlidec.a"
+    cp "$BROTLI_BASE_DIR/$ARCH/lib/libbrotlienc-static.a" "$TARGET_PATH/install/$ARCH/lib/libbrotlienc.a"
 
     # Copy bzip2 library
-    cp "$BZIP2_BASE_DIR/install/$ARCH/lib/libbz2.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$BZIP2_BASE_DIR/$ARCH/lib/libbz2.a" "$TARGET_PATH/install/$ARCH/lib/"
 
     # Copy FreeType library
-    cp "$FREETYPE_BASE_DIR/install/$ARCH/lib/libfreetype.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$FREETYPE_BASE_DIR/$ARCH/lib/libfreetype.a" "$TARGET_PATH/install/$ARCH/lib/"
 
     # Copy HarfBuzz library
-    cp "$HARFBUZZ_BASE_DIR/install/$ARCH/lib/libharfbuzz.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$HARFBUZZ_BASE_DIR/$ARCH/lib/libharfbuzz.a" "$TARGET_PATH/install/$ARCH/lib/"
 
     # Copy libpng library
-    cp "$LIBPNG_BASE_DIR/install/$ARCH/lib/libpng.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$LIBPNG_BASE_DIR/$ARCH/lib/libpng.a" "$TARGET_PATH/install/$ARCH/lib/"
 
     # Copy libxml2 library
-    cp "$LIBXML2_BASE_DIR/install/$ARCH/lib/libxml2.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$LIBXML2_BASE_DIR/$ARCH/lib/libxml2.a" "$TARGET_PATH/install/$ARCH/lib/"
 
     # Copy OpenSSL libraries
-    cp "$OPENSSL_BASE_DIR/install/$ARCH/lib/libssl.a" "$TARGET_PATH/install/$ARCH/lib/"
-    cp "$OPENSSL_BASE_DIR/install/$ARCH/lib/libcrypto.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$OPENSSL_BASE_DIR/$ARCH/lib/libssl.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$OPENSSL_BASE_DIR/$ARCH/lib/libcrypto.a" "$TARGET_PATH/install/$ARCH/lib/"
 
     # Copy zlib library
-    cp "$ZLIB_BASE_DIR/install/$ARCH/lib/libz.a" "$TARGET_PATH/install/$ARCH/lib/"
+    cp "$ZLIB_BASE_DIR/$ARCH/lib/libz.a" "$TARGET_PATH/install/$ARCH/lib/"
+
+    mkdir -p $TARGET_PATH/install/$ARCH/include
 
     # Copy headers
-    cp -r "$PODOFO_BASE_DIR/install/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
-    cp -r "$BROTLI_BASE_DIR/install/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
-    cp -r "$BZIP2_BASE_DIR/install/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
-    cp -r "$FREETYPE_BASE_DIR/install/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
-    cp -r "$HARFBUZZ_BASE_DIR/install/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
-    cp -r "$LIBPNG_BASE_DIR/install/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
-    cp -r "$LIBXML2_BASE_DIR/install/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
-    cp -r "$OPENSSL_BASE_DIR/install/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
-    cp -r "$ZLIB_BASE_DIR/install/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
+    cp -r "$PODOFO_BASE_DIR/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
+    cp -r "$BROTLI_BASE_DIR/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
+    cp -r "$BZIP2_BASE_DIR/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
+    cp -r "$FREETYPE_BASE_DIR/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
+    cp -r "$HARFBUZZ_BASE_DIR/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
+    cp -r "$LIBPNG_BASE_DIR/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
+    cp -r "$LIBXML2_BASE_DIR/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
+    cp -r "$OPENSSL_BASE_DIR/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
+    cp -r "$ZLIB_BASE_DIR/$ARCH/include/"* "$TARGET_PATH/install/$ARCH/include/"
 done
 
 echo "Libraries copied and organized successfully!"

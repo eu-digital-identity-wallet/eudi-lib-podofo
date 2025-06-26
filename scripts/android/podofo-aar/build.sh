@@ -30,13 +30,8 @@ TOOLCHAIN="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64"
 API_LEVEL=21
 
 # Create temporary and output directories
-rm -rf "$TEMP_DIR" "$AAR_OUTPUT_DIR"
-mkdir -p "$TEMP_DIR" "$AAR_OUTPUT_DIR" "$BUILD_DIR"
-
-# Create the basic AAR structure
-mkdir -p "$TEMP_DIR/jni"
-mkdir -p "$TEMP_DIR/res"
-mkdir -p "$TEMP_DIR/libs"
+rm -rf "$AAR_OUTPUT_DIR"
+mkdir -p "$AAR_OUTPUT_DIR" "$BUILD_DIR"
 
 # Copy static libraries and headers for each architecture
 ANDROID_ARCHS=("arm64-v8a" "x86" "x86_64")
@@ -67,7 +62,7 @@ for ABI in "${ANDROID_ARCHS[@]}"; do
     echo "Creating shared library for $ABI..."
     "$CXX" -shared -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -o "$BUILD_DIR/jni/$ABI/libpodofo.so" \
         -I"$JAVA_HOME/include" \
-        -I"$JAVA_HOME/include/darwin" \
+        -I"$JAVA_HOME/include/linux" \
         -I"$PODOFO_WRAPPER_DIR" \
         -I"$INSTALL_DIR/$ABI/include" \
         -I"$INSTALL_DIR/$ABI/include/podofo" \
@@ -75,7 +70,7 @@ for ABI in "${ANDROID_ARCHS[@]}"; do
         -I"$INSTALL_DIR/$ABI/include/podofo/auxiliary" \
         -I"$INSTALL_DIR/$ABI/include/podofo/3rdparty" \
         -I"$INSTALL_DIR/$ABI/include/podofo/optional" \
-        "$PODOFO_ANDROID_DIR/podofo_jni.cpp" \
+        "$PODOFO_WRAPPER_DIR/podofo_jni.cpp" \
         -Wl,--whole-archive \
         "$INSTALL_DIR/$ABI/lib/libpodofo.a" \
         "$INSTALL_DIR/$ABI/lib/libpodofo_private.a" \
