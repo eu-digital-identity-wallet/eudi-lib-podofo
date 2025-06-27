@@ -34,7 +34,7 @@ rm -rf "$AAR_OUTPUT_DIR"
 mkdir -p "$AAR_OUTPUT_DIR" "$BUILD_DIR"
 
 # Copy static libraries and headers for each architecture
-ANDROID_ARCHS=("arm64-v8a" "x86" "x86_64")
+ANDROID_ARCHS=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
 
 for ABI in "${ANDROID_ARCHS[@]}"; do
     echo "Processing $ABI..."
@@ -47,6 +47,10 @@ for ABI in "${ANDROID_ARCHS[@]}"; do
         "arm64-v8a")
             CC="$TOOLCHAIN/bin/aarch64-linux-android$API_LEVEL-clang"
             CXX="$TOOLCHAIN/bin/aarch64-linux-android$API_LEVEL-clang++"
+            ;;
+        "armeabi-v7a")
+            CC="$TOOLCHAIN/bin/armv7a-linux-androideabi$API_LEVEL-clang"
+            CXX="$TOOLCHAIN/bin/armv7a-linux-androideabi$API_LEVEL-clang++"
             ;;
         "x86")
             CC="$TOOLCHAIN/bin/i686-linux-android$API_LEVEL-clang"
@@ -93,6 +97,9 @@ for ABI in "${ANDROID_ARCHS[@]}"; do
     case $ABI in
         "arm64-v8a")
             cp "$TOOLCHAIN/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so" "$BUILD_DIR/jni/$ABI/"
+            ;;
+        "armeabi-v7a")
+            cp "$TOOLCHAIN/sysroot/usr/lib/arm-linux-androideabi/libc++_shared.so" "$BUILD_DIR/jni/$ABI/"
             ;;
         "x86")
             cp "$TOOLCHAIN/sysroot/usr/lib/i686-linux-android/libc++_shared.so" "$BUILD_DIR/jni/$ABI/"
