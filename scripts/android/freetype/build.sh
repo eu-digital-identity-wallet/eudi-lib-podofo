@@ -146,21 +146,19 @@ function build() {
         export AR
         export RANLIB
         export STRIP
-        export CFLAGS="-fPIC -O3 -fvisibility=hidden -I$BZIP2_DIR/include -I$BROTLI_DIR/$ABI/include"
-        export CXXFLAGS="-fPIC -O3 -fvisibility=hidden -I$BZIP2_DIR/include -I$BROTLI_DIR/$ABI/include"
-        export LDFLAGS="-fPIC -L$BZIP2_DIR/lib -L$BROTLI_DIR/$ABI/lib"
+        export CFLAGS="-fPIC -O3 -fvisibility=hidden -I$BZIP2_DIR/include"
+        export CXXFLAGS="-fPIC -O3 -fvisibility=hidden -I$BZIP2_DIR/include"
+        export LDFLAGS="-fPIC -L$BZIP2_DIR/lib"
         
         # Configure and build freetype
         "$BUILD_DIR/freetype-$FREETYPE_VERSION/configure" \
             --host="$HOST" \
             --prefix="$INSTALL_DIR/$ABI" \
-            --enable-shared \
-            --disable-static \
-            --with-png="no" \
+            --enable-static \
+            --disable-shared \
+            --with-pic \
             --with-sysroot="$SYSROOT" \
-            --with-bzip2="$BZIP2_DIR" \
-            --with-brotli="$BROTLI_DIR/$ABI" \
-            LDFLAGS="-L$BROTLI_DIR/$ABI/lib -lbrotlidec -lbrotlienc -lbrotlicommon"
+            --with-bzip2="$BZIP2_DIR"
         
         # Clean previous build
         make clean
@@ -180,7 +178,7 @@ function build() {
     # freetype CMake config
     cat > "$INSTALL_DIR/freetype-config.cmake" << EOF
 set(FREETYPE_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/include")
-set(FREETYPE_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libfreetype.so")
+set(FREETYPE_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libfreetype.a")
 set(FREETYPE_FOUND TRUE)
 EOF
 
@@ -197,8 +195,8 @@ includedir=\${prefix}/include
 Name: FreeType 2
 Description: A free, high-quality, and portable font engine
 Version: $FREETYPE_VERSION
-Libs: -L\${libdir} -lfreetype -lz -lm -lbrotlidec -lbrotlienc -lbrotlicommon
-Libs.private: -lz -lm -lbrotlidec -lbrotlienc -lbrotlicommon
+Libs: -L\${libdir} -lfreetype -lz -lm
+Libs.private: -lz -lm
 Cflags: -I\${includedir}
 EOF
 

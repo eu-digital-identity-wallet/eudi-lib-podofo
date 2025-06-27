@@ -15,7 +15,7 @@ done
 
 NDK_DIR="$1"
 TARGET_DIR="$2"
-LIBPNG_VERSION="$3"
+ZLIB_VERSION="$3"
 
 # Convert TARGET_DIR to absolute path
 TARGET_DIR="$(cd "$(dirname "$TARGET_DIR")" && pwd)/$(basename "$TARGET_DIR")"
@@ -33,21 +33,21 @@ function check() {
     # Check that NDK_DIR argument has been passed
     if [ -z "$NDK_DIR" ]; then
         echo "Error: NDK_DIR argument not provided."
-        echo "Usage: $0 <NDK_DIR> <TARGET_DIR> <LIBPNG_VERSION>"
+        echo "Usage: $0 <NDK_DIR> <TARGET_DIR> <ZLIB_VERSION>"
         exit 1
     fi
 
     # Check that TARGET_DIR argument has been passed
     if [ -z "$TARGET_DIR" ]; then
         echo "Error: TARGET_DIR argument not provided."
-        echo "Usage: $0 <NDK_DIR> <TARGET_DIR> <LIBPNG_VERSION>"
+        echo "Usage: $0 <NDK_DIR> <TARGET_DIR> <ZLIB_VERSION>"
         exit 1
     fi
 
-    # Check that LIBPNG_VERSION argument has been passed
-    if [ -z "$LIBPNG_VERSION" ]; then
-        echo "Error: LIBPNG_VERSION argument not provided."
-        echo "Usage: $0 <NDK_DIR> <TARGET_DIR> <LIBPNG_VERSION>"
+    # Check that ZLIB_VERSION argument has been passed
+    if [ -z "$ZLIB_VERSION" ]; then
+        echo "Error: ZLIB_VERSION argument not provided."
+        echo "Usage: $0 <NDK_DIR> <TARGET_DIR> <ZLIB_VERSION>"
         exit 1
     fi
 
@@ -63,22 +63,23 @@ function prepare() {
     # Create directories if they don't exist
     mkdir -p "$BUILD_DIR" "$DOWNLOAD_DIR"
 
-    # Download libpng if not already present
-    if [ ! -f "$DOWNLOAD_DIR/libpng-$LIBPNG_VERSION.tar.gz" ]; then
-        echo "Downloading libpng..."
-        curl -L "https://downloads.sourceforge.net/project/libpng/libpng16/$LIBPNG_VERSION/libpng-$LIBPNG_VERSION.tar.gz" -o "$DOWNLOAD_DIR/libpng-$LIBPNG_VERSION.tar.gz"
+    # Download zlib if not already present
+    if [ ! -f "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION.tar.gz" ]; then
+        echo "Downloading zlib..."
+        curl -L "https://github.com/madler/zlib/archive/refs/tags/v$ZLIB_VERSION.tar.gz" -o "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION.tar.gz"
     fi
 
-    # Extract libpng if not already extracted
-    if [ ! -d "$BUILD_DIR/libpng-$LIBPNG_VERSION" ]; then
-        echo "Extracting libpng..."
-        tar xzf "$DOWNLOAD_DIR/libpng-$LIBPNG_VERSION.tar.gz" -C "$BUILD_DIR"
+    # Extract zlib if not already extracted
+    if [ ! -d "$BUILD_DIR/zlib-$ZLIB_VERSION" ]; then
+        echo "Extracting zlib..."
+        tar xzf "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION.tar.gz" -C "$BUILD_DIR"
     fi
 }
 
 function build() {
-    # Create directories if they don't exist
-    mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
+
+    # Create install directory
+    mkdir -p "$INSTALL_DIR"
 
     # Build for each architecture
     for ABI in "${ARCHS[@]}"; do
@@ -115,35 +116,19 @@ function build() {
         mkdir -p "$ARCH_BUILD_DIR"
         cd "$ARCH_BUILD_DIR"
         
-        # Configure build
-        "$BUILD_DIR/libpng-$LIBPNG_VERSION/configure" \
-            --host="$HOST" \
-            --prefix="$INSTALL_DIR/$ABI" \
-            --enable-static \
-            --disable-shared \
-            --with-pic \
-            --with-sysroot="$SYSROOT" \
-            CC="$CC" \
-            CXX="$CXX" \
-            AR="$AR" \
-            RANLIB="$RANLIB" \
-            STRIP="$STRIP" \
-            CFLAGS="-fPIC -O3 -fvisibility=hidden -DPNG_INTEL_SSE_OPT=0" \
-            CXXFLAGS="-fPIC -O3 -fvisibility=hidden -DPNG_INTEL_SSE_OPT=0" \
-            LDFLAGS="-fPIC"
+        # Copy source files
+        cp -r "$BUILD_DIR/zlib-$ZLIB_VERSION"/* .
         
-        # Clean previous build
+        # Configure zlib for cross-compilation
+        CHOST="$HOST" \
+        CC="$CC" \
+        CFLAGS="-fPIC -O3" \
+        ./configure --static --prefix="$INSTALL_DIR/$ABI"
+        
+        # Build and install
         make clean
-        
-        # Build only the library
-        make libpng16.la
-        
-        # Install library and headers
-        make install-libLTLIBRARIES install-data-am
-        
-        # Create symlink for libpng.a
-        cd "$INSTALL_DIR/$ABI/lib"
-        ln -sf libpng16.a libpng.a
+        make
+        make install
         
         echo "Build completed for $ABI"
     done
@@ -153,30 +138,30 @@ function build() {
 
     # Create a CMake configuration file
     echo "Creating CMake configuration..."
-    cat > "$INSTALL_DIR/libpng-config.cmake" << EOF
-set(LIBPNG_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/include")
-set(LIBPNG_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libpng16.a")
-set(LIBPNG_FOUND TRUE)
+    cat > "$INSTALL_DIR/zlib-config.cmake" << EOF
+set(ZLIB_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/include")
+set(ZLIB_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libz.a")
+set(ZLIB_FOUND TRUE)
 EOF
 
     # Create a pkg-config file
     echo "Creating pkg-config file..."
-    cat > "$INSTALL_DIR/libpng.pc" << EOF
+    cat > "$INSTALL_DIR/zlib.pc" << EOF
 prefix=$INSTALL_DIR
 exec_prefix=\${prefix}
 libdir=\${exec_prefix}/lib
 includedir=\${prefix}/include
 
-Name: libpng
-Description: Loads and saves PNG files
-Version: $LIBPNG_VERSION
-Libs: -L\${libdir} -lpng16 -lz -lm
-Libs.private: -lz -lm
+Name: zlib
+Description: A Massively Spiffy Yet Delicately Unobtrusive Compression Library
+Version: $ZLIB_VERSION
+Libs: -L\${libdir} -lz
+Libs.private: -lz
 Cflags: -I\${includedir}
 EOF
 
     echo "Installation completed successfully!"
-    echo "CMake and pkg-config files are available in: $INSTALL_DIR" 
+    echo "CMake and pkg-config files are available in: $INSTALL_DIR"
 }
 
 check
