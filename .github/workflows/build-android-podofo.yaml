@@ -1,9 +1,9 @@
 name: Build PoDoFo for Android
 
 on:
-  # push:
-  # pull_request:
-  #   types: [opened, reopened, synchronize]
+  push:
+  pull_request:
+    types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
       brotli_version:
