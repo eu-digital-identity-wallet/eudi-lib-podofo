@@ -1,6 +1,6 @@
 
 object Meta {
-    const val BASE_URL = "https://github.com/eu-digital-identity-wallet/eudi-lig-podofo"
+    const val BASE_URL = "https://github.com/eu-digital-identity-wallet/eudi-lib-podofo"
 }
 
 plugins {
