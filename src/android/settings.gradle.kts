@@ -19,4 +19,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "eudi-lib-podofo-android"
+rootProject.name = "eudi-lib-android-podofo"
