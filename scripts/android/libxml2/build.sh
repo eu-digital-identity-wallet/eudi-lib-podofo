@@ -126,11 +126,11 @@ function build() {
         cd "$ARCH_BUILD_DIR"
         
         # Configure build
-        "$BUILD_DIR/libxml2-$LIBXML_VERSION/configure" \
+        "$BUILD_DIR/libxml2-2.12.3/configure" \
             --host="$HOST" \
             --prefix="$INSTALL_DIR/$ABI" \
-            --enable-shared \
-            --disable-static \
+            --enable-static \
+            --disable-shared \
             --with-pic \
             --with-sysroot="$SYSROOT" \
             --without-python \
@@ -144,6 +144,32 @@ function build() {
             --without-catalog \
             --without-docbook \
             --without-c14n \
+            --without-schematron \
+            --without-schemas \
+            --without-xinclude \
+            --without-xpath \
+            --without-xptr \
+            --without-modules \
+            --without-debug \
+            --without-mem-debug \
+            --without-run-debug \
+            --without-regexps \
+            --without-coverage \
+            --without-threads \
+            --without-history \
+            --without-readline \
+            --without-pattern \
+            --without-push \
+            --without-valid \
+            --without-writer \
+            --without-sax1 \
+            --without-legacy \
+            --without-c14n \
+            --without-catalog \
+            --without-docbook \
+            --without-ftp \
+            --without-http \
+            --without-iso8859x \
             --without-schematron \
             --without-schemas \
             --without-xinclude \
@@ -179,8 +205,12 @@ function build() {
         # Build only the library
         make libxml2.la
         
-        # Install only the library and headers
-        make install-libLTLIBRARIES install-data
+        # Install library and headers
+        make install
+        
+        # Create symlink for libxml2.a
+        cd "$INSTALL_DIR/$ABI/lib"
+        ln -sf libxml2.a libxml.a
         
         echo "Build completed for $ABI"
     done

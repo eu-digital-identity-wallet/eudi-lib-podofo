@@ -127,15 +127,14 @@ function build() {
         # Clean previous build
         make clean
         
-        # Build shared library
-        echo "Compiling shared library for $ABI..."
-        "$CC" -shared -fPIC -O3 -o libbz2.so blocksort.c huffman.c crctable.c randtable.c compress.c decompress.c bzlib.c
+        # Build library
+        make libbz2.a CC="$CC" AR="$AR" RANLIB="$RANLIB" CFLAGS="-fPIC -O3"
         
         # Create install directory
         mkdir -p "$INSTALL_DIR/$ABI/lib" "$INSTALL_DIR/$ABI/include"
         
         # Install library and headers
-        cp libbz2.so "$INSTALL_DIR/$ABI/lib/"
+        cp libbz2.a "$INSTALL_DIR/$ABI/lib/"
         cp bzlib.h "$INSTALL_DIR/$ABI/include/"
         
         echo "Build completed for $ABI"
@@ -148,7 +147,7 @@ function build() {
     echo "Creating CMake configuration..."
     cat > "$INSTALL_DIR/bzip2-config.cmake" << EOF
 set(BZIP2_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/include")
-set(BZIP2_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libbz2.so")
+set(BZIP2_LIBRARIES "\${CMAKE_CURRENT_LIST_DIR}/lib/libbz2.a")
 set(BZIP2_FOUND TRUE)
 EOF
 

@@ -1,6 +1,9 @@
 name: Build PoDoFo for Android
 
 on:
+  push:
+  pull_request:
+    types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
       brotli_version:
@@ -26,7 +29,15 @@ on:
       openssl_version:
         description: "openssl version"
         required: true
-        default: "3.2.1"
+        default: "3.2.4"
+      harfbuzz_version:
+        description: "harfbuzz version"
+        required: true
+        default: "11.2.1"
+      zlib_version:
+        description: "zlib version"
+        required: true
+        default: "1.2.13"
 
 jobs:
   build-android-brotli:
@@ -290,7 +301,7 @@ jobs:
   build-android-openssl:
     runs-on: ubuntu-latest
     env:
-      OPENSSL_VERSION: ${{ github.event.inputs.openssl_version || '3.2.1' }}
+      OPENSSL_VERSION: ${{ github.event.inputs.openssl_version || '3.2.4' }}
 
     steps:
       - name: Checkout repository
@@ -334,6 +345,106 @@ jobs:
           path: build/android/openssl/install
           overwrite: true
 
+  build-android-harfbuzz:
+    runs-on: ubuntu-latest
+    env:
+      HARFBUZZ_VERSION: ${{ github.event.inputs.harfbuzz_version || '11.2.1' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache harfbuzz build
+        id: cache-android-harfbuzz
+        uses: actions/cache@v4
+        with:
+          path: build/android/harfbuzz/install
+          key: deps-android-harfbuzz-${{ env.HARFBUZZ_VERSION }}
+
+      - name: Install CMake
+        if: steps.cache-android-harfbuzz.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Checkout harfbuzz source code
+        uses: actions/checkout@v4
+        with:
+          repository: harfbuzz/harfbuzz
+          ref: refs/tags/${{ env.HARFBUZZ_VERSION }}
+          path: build/android/harfbuzz/build/harfbuzz
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        if: steps.cache-android-harfbuzz.outputs.cache-hit != 'true'
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+
+      - name: Build from source
+        if: steps.cache-android-harfbuzz.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/android/harfbuzz/build.sh
+          ./scripts/android/harfbuzz/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/harfbuzz ${{ env.HARFBUZZ_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          HARFBUZZ_VERSION: ${{ env.HARFBUZZ_VERSION }}
+
+      - name: Upload harfbuzz artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-harfbuzz
+          path: build/android/harfbuzz/install
+          overwrite: true
+
+  build-android-zlib:
+    runs-on: ubuntu-latest
+    env:
+      ZLIB_VERSION: ${{ github.event.inputs.zlib_version || '1.2.13' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache zlib build
+        id: cache-android-zlib
+        uses: actions/cache@v4
+        with:
+          path: build/android/zlib/install
+          key: deps-android-zlib-${{ env.ZLIB_VERSION }}
+
+      - name: Checkout zlib source code
+        uses: actions/checkout@v4
+        with:
+          repository: madler/zlib
+          ref: refs/tags/v${{ env.ZLIB_VERSION }}
+          path: build/android/zlib/build/zlib-${{ env.ZLIB_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        if: steps.cache-android-zlib.outputs.cache-hit != 'true'
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+
+      - name: Build from source
+        if: steps.cache-android-zlib.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/android/zlib/build.sh
+          ./scripts/android/zlib/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/zlib ${{ env.ZLIB_VERSION }} --skip-prepare
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ZLIB_VERSION: ${{ env.ZLIB_VERSION }}
+
+      - name: Upload zlib artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-android-zlib
+          path: build/android/zlib/install
+          overwrite: true
+
   build-android-podofo:
     runs-on: ubuntu-latest
     needs:
@@ -342,6 +453,8 @@ jobs:
         build-android-libpng,
         build-android-libxml2,
         build-android-openssl,
+        build-android-harfbuzz,
+        build-android-zlib,
       ]
 
     steps:
@@ -383,6 +496,9 @@ jobs:
           ndk-version: r27c
           local-cache: true
 
+      - name: Install CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake rsync
+
       - name: Build from source
         run: |
           chmod +x scripts/android/podofo/build.sh
@@ -397,3 +513,133 @@ jobs:
           name: deps-android-podofo
           path: build/android/podofo/install
           overwrite: true
+
+  build-android-podofo-aar:
+    runs-on: ubuntu-latest
+    needs: build-android-podofo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        id: deps-android-brotli
+        with:
+          name: deps-android-brotli
+          path: deps-android/brotli
+
+      - uses: actions/download-artifact@v4
+        id: deps-android-bzip2
+        with:
+          name: deps-android-bzip2
+          path: deps-android/bzip2
+
+      - name: Download freetype artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-freetype
+        with:
+          name: deps-android-freetype
+          path: deps-android/freetype
+
+      - name: Download harfbuzz artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-harfbuzz
+        with:
+          name: deps-android-harfbuzz
+          path: deps-android/harfbuzz
+
+      - name: Download libpng artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-libpng
+        with:
+          name: deps-android-libpng
+          path: deps-android/libpng
+
+      - name: Download libxml2 artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-libxml2
+        with:
+          name: deps-android-libxml2
+          path: deps-android/libxml2
+
+      - name: Download openssl artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-openssl
+        with:
+          name: deps-android-openssl
+          path: deps-android/openssl
+
+      - name: Download podofo artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-podofo
+        with:
+          name: deps-android-podofo
+          path: deps-android/podofo
+
+      - name: Download zlib artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-zlib
+        with:
+          name: deps-android-zlib
+          path: deps-android/zlib
+
+      - name: Organize libs
+        run: |
+          chmod +x scripts/android/podofo-aar/build.sh
+          mkdir -p build/android/aar
+          ./scripts/android/podofo-aar/organize_libs.sh ${{ steps.deps-android-brotli.outputs.download-path }} ${{ steps.deps-android-bzip2.outputs.download-path }} ${{ steps.deps-android-freetype.outputs.download-path }} ${{ steps.deps-android-harfbuzz.outputs.download-path }} ${{ steps.deps-android-libpng.outputs.download-path }} ${{ steps.deps-android-libxml2.outputs.download-path }} ${{ steps.deps-android-openssl.outputs.download-path }} ${{ steps.deps-android-podofo.outputs.download-path }} ${{ steps.deps-android-zlib.outputs.download-path }} build/android/aar
+      
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          local-cache: true
+
+      - name: Build JNI libs
+        run: |
+          chmod +x scripts/android/podofo-aar/build.sh
+          ./scripts/android/podofo-aar/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} src/wrapper build/android/aar
+          mkdir -p src/android/src/main/jniLibs
+          cp -r build/android/aar/build/jni/* src/android/src/main/jniLibs/
+        env:
+          NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build with Gradle Wrapper
+        run: |
+          cd src/android  
+          ./gradlew --no-daemon build
+
+      - id: extract
+        name: Extract code version from gradle.properties
+        run: echo "CODE_VERSION=$(awk -F= '$1~/version/{print $2}' src/android/gradle.properties)" >> $GITHUB_OUTPUT
+
+      - name: Upload podofo AAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-podofo-aar
+          path: src/android/build/outputs/aar/eudi-lib-android-podofo-*.aar
+          overwrite: true
+      
+      - name: Publish to Sonatype
+        if: github.event_name != 'pull_request' && endsWith(steps.extract.outputs.CODE_VERSION, 'SNAPSHOT') && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release')) && github.repository_owner == 'eu-digital-identity-wallet'
+        run: ./gradlew publishAllPublicationsToMavenCentral --full-stacktrace
+        env:
+          CI: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.OSSRH_GPG_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_PASSWORD }}
+          GIT_REF_NAME: ${{ github.ref_name }}
+
+        

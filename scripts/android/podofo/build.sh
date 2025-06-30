@@ -43,7 +43,6 @@ function check() {
         echo "Usage: $0 <NDK_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
         exit 1
     fi
-
 }
 
 function prepare() {
