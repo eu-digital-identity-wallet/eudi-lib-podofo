@@ -129,7 +129,7 @@ set(CMAKE_SYSTEM_NAME Android)
 set(CMAKE_SYSTEM_VERSION $API_LEVEL)
 set(CMAKE_ANDROID_ARCH_ABI $ABI)
 set(CMAKE_ANDROID_NDK $NDK_DIR)
-set(CMAKE_ANDROID_STL_TYPE c++_shared)
+set(CMAKE_ANDROID_STL_TYPE c++_static)
 set(CMAKE_C_COMPILER $CC)
 set(CMAKE_CXX_COMPILER $CXX)
 set(CMAKE_AR $AR)
@@ -145,7 +145,7 @@ EOF
         cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=android.toolchain.cmake \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_SHARED_LIBS=OFF \
             -DBROTLI_BUNDLED_MODE=ON \
             -DBROTLI_DISABLE_TESTS=ON \
             -DCMAKE_POLICY_DEFAULT_CMP0057=NEW
@@ -156,7 +156,7 @@ EOF
         mkdir -p "$INSTALL_DIR/$ABI/lib" "$INSTALL_DIR/$ABI/include"
         
         # Install library and headers
-        cp libbrotli*.so "$INSTALL_DIR/$ABI/lib/"
+        cp libbrotli*.a "$INSTALL_DIR/$ABI/lib/"
         cp -r ../c/include "$INSTALL_DIR/$ABI/"
         
         echo "Build completed for $ABI"
