@@ -615,7 +615,7 @@ jobs:
 
       - name: Build with Gradle Wrapper
         run: |
-          cd src/android  
+          cd src/android
           ./gradlew --no-daemon build
 
       - id: extract
@@ -631,7 +631,9 @@ jobs:
       
       - name: Publish to Sonatype
         if: github.event_name != 'pull_request' && endsWith(steps.extract.outputs.CODE_VERSION, 'SNAPSHOT') && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release')) && github.repository_owner == 'eu-digital-identity-wallet'
-        run: ./gradlew publishAllPublicationsToMavenCentral --full-stacktrace
+        run: |
+          cd src/android
+          ./gradlew publishAllPublicationsToMavenCentral --full-stacktrace
         env:
           CI: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
