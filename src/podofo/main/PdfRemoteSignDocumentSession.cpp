@@ -171,18 +171,13 @@ void PdfRemoteSignDocumentSession::finishSigning(const string& signedHash, const
             throw runtime_error("Signer not initialized");
         }
 
+        std::string tsr;
 
-        std::string tsr = DecodeBase64Tsr(base64Tsr);
+        if (_conformanceLevel != "ADES_B_B") {
+            tsr = DecodeBase64Tsr(base64Tsr);
+            _signer->SetTimestampToken({ tsr.data(), tsr.size() });
 
-        cout << "Setting timestamp token" << endl;
-        _signer->SetTimestampToken({ tsr.data(), tsr.size() });
-
-        //--------------------------- End
-
-
-
-
-
+        }
         _ctx.FinishSigning(_results);
         cout << "=== Signing Process Completed Successfully ===\n" << endl;
     }

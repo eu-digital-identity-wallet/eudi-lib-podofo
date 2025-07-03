@@ -1,9 +1,6 @@
-name: Build PoDoFo for Android
+name: Release PoDoFo for Android
 
 on:
-  push:
-  pull_request:
-    types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
       brotli_version:
@@ -38,6 +35,8 @@ on:
         description: "zlib version"
         required: true
         default: "1.2.13"
+  release:
+    types: [released]
 
 jobs:
   build-android-brotli:
@@ -630,10 +629,10 @@ jobs:
           overwrite: true
       
       - name: Publish to Sonatype
-        if: github.event_name != 'pull_request' && endsWith(steps.extract.outputs.CODE_VERSION, 'SNAPSHOT') && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release')) && github.repository_owner == 'eu-digital-identity-wallet'
+        if: github.repository_owner == 'eu-digital-identity-wallet' && startsWith(github.ref, 'refs/tags') && format('v{0}', steps.extract.outputs.code-version) == github.ref_name
         run: |
           cd src/android
-          ./gradlew publishAllPublicationsToMavenCentral --full-stacktrace
+          ./gradlew publishAllPublicationsToMavenCentral --no-configuration-cache --full-stacktrace
         env:
           CI: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
