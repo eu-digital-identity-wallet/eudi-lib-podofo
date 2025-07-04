@@ -584,6 +584,7 @@ jobs:
         id: deps-android-podofo
         with:
           pattern: deps-android-podofo-*
+          merge-multiple: true
           path: deps-android/podofo
 
       - name: Organize libs
