@@ -120,6 +120,10 @@ jobs:
           path: build/ios/libxml2/build/libxml2-${{ env.LIBXML2_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install build dependencies
+        run: |
+          brew install autoconf automake libtool
+
       - name: Build from source
         if: steps.cache-ios-libxml2.outputs.cache-hit != 'true'
         run: |
@@ -185,7 +189,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Download freetype artifact
         uses: actions/download-artifact@v4
         id: deps-ios-freetype
