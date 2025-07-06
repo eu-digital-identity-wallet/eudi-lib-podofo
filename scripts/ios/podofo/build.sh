@@ -1,197 +1,177 @@
 #!/bin/bash
 set -e
 
-# PoDoFo Configuration
-PODOFO_VERSION="master"
-PODOFO_REPO_NAME="EUDI_PoDoFo"
-
-# Download and extract podofo if not already present
-if [ ! -d "podofo-${PODOFO_VERSION}" ]; then
-    echo "Downloading podofo-${PODOFO_VERSION}..."
-    curl -L "https://github.com/hectorgat/EUDI_PoDoFo/archive/refs/heads/${PODOFO_VERSION}.zip" -o "podofo-${PODOFO_VERSION}.zip"
-    unzip "podofo-${PODOFO_VERSION}.zip"
-
-    # Only move the directory if the names are different
-    if [ PODOFO_REPO_NAME != "podofo" ]; then
-        mv "${PODOFO_REPO_NAME}-${PODOFO_VERSION}" "podofo-${PODOFO_VERSION}"
+SKIP_PREPARE=0
+# Parse arguments
+for arg in "$@"; do
+    if [ "$arg" == "--skip-prepare" ]; then
+        SKIP_PREPARE=1
+        # Remove the argument from $@
+        set -- "${@/"$arg"}"
     fi
-fi
+done
+
+# Configuration
+TARGET_DIR="$1"
+FREETYPE_DIR="$2"
+LIBPNG_DIR="$3"
+LIBXML2_DIR="$4"
+OPENSSL_DIR="$5"
+MIN_IOS_VERSION="16.5"
 
 # Define architectures and platforms
 DEVICE_ARCHS="arm64"
 SIMULATOR_ARCHS="arm64"
 PLATFORMS="iphoneos iphonesimulator"
 
-# Define paths
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_DIR="${SCRIPT_DIR}/build"
-INSTALL_DIR="${SCRIPT_DIR}/install"
-XCFRAMEWORK_DIR="${SCRIPT_DIR}/xcframework"
-PODOFO_SRC_DIR="$(cd "${SCRIPT_DIR}/podofo-${PODOFO_VERSION}" && pwd)"
+# Convert input dirs to absolute path
+TARGET_DIR="$(cd "$(dirname "$TARGET_DIR")" && pwd)/$(basename "$TARGET_DIR")"
+FREETYPE_DIR="$(cd "$(dirname "$FREETYPE_DIR")" && pwd)/$(basename "$FREETYPE_DIR")"
+LIBPNG_DIR="$(cd "$(dirname "$LIBPNG_DIR")" && pwd)/$(basename "$LIBPNG_DIR")"
+LIBXML2_DIR="$(cd "$(dirname "$LIBXML2_DIR")" && pwd)/$(basename "$LIBXML2_DIR")"
+OPENSSL_DIR="$(cd "$(dirname "$OPENSSL_DIR")" && pwd)/$(basename "$OPENSSL_DIR")"
 
+# Define directories
+BUILD_DIR="$TARGET_DIR/build"
+INSTALL_DIR="$TARGET_DIR/install"
+FRAMEWORK_DIR="$INSTALL_DIR/xcframework"
+SOURCE_DIR=$(pwd)
 
-# Dependency paths
-## iOS
-ZLIB_INCLUDE_DIR_IOS="/Users/pkokkinakis/Desktop/PoDoFo/libpng/xcframework/zlib.xcframework/ios-arm64/Headers"
-ZLIB_LIBRARY_IOS="/Users/pkokkinakis/Desktop/PoDoFo/libpng/xcframework/zlib.xcframework/ios-arm64/libz.a"
-OPENSSL_ROOT_DIR_IOS="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks"
-OPENSSL_INCLUDE_DIR_IOS="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/Crypto.xcframework/ios-arm64/Headers"
-OPENSSL_SSL_LIBRARY_IOS="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/SSL.xcframework/ios-arm64/libssl.a"
-OPENSSL_CRYPTO_LIBRARY_IOS="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/Crypto.xcframework/ios-arm64/libcrypto.a"
-OPENSSL_LIBRARIES_IOS="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/SSL.xcframework/ios-arm64/libssl.a;/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/Crypto.xcframework/ios-arm64/libcrypto.a"
-FREETYPE_INCLUDE_DIRS_IOS="/Users/pkokkinakis/Desktop/PoDoFo/freetype/build/ios/xcframework/FreeType.xcframework/ios-arm64/Headers"
-FREETYPE_LIBRARY_IOS="/Users/pkokkinakis/Desktop/PoDoFo/freetype/build/ios/xcframework/FreeType.xcframework/ios-arm64/libfreetype.a"
-LIBXML2_INCLUDE_DIR_IOS="/Users/pkokkinakis/Desktop/PoDoFo/libxml2/framework/libxml2.xcframework/ios-arm64/libxml2.framework/Headers"
-LIBXML2_LIBRARIES_IOS="/Users/pkokkinakis/Desktop/PoDoFo/libxml2/framework/libxml2.xcframework/ios-arm64/libxml2.framework/libxml2"
-PNG_PNG_INCLUDE_DIR_IOS="/Users/pkokkinakis/Desktop/PoDoFo/libpng/xcframework/libpng.xcframework/ios-arm64/Headers"
-PNG_LIBRARY_IOS="/Users/pkokkinakis/Desktop/PoDoFo/libpng/xcframework/libpng.xcframework/ios-arm64/libpng16.a"
+function check() {
+    # Check that TARGET_DIR argument has been passed
+    if [ -z "$TARGET_DIR" ]; then
+        echo "Error: TARGET_DIR argument not provided."
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        exit 1
+    fi
 
-## Simulator
-ZLIB_INCLUDE_DIR_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/libpng/xcframework/zlib.xcframework/ios-arm64_x86_64-simulator/Headers"
-ZLIB_LIBRARY_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/libpng/xcframework/zlib.xcframework/ios-arm64_x86_64-simulator/libz.a"
-OPENSSL_ROOT_DIR_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks"
-OPENSSL_INCLUDE_DIR_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/Crypto.xcframework/ios-arm64_x86_64-simulator/Headers"
-OPENSSL_SSL_LIBRARY_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/SSL.xcframework/ios-arm64_x86_64-simulator/libssl.a"
-OPENSSL_CRYPTO_LIBRARY_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/Crypto.xcframework/ios-arm64_x86_64-simulator/libcrypto.a"
-OPENSSL_LIBRARIES_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/SSL.xcframework/ios-arm64_x86_64-simulator/libssl.a;/Users/pkokkinakis/Desktop/PoDoFo/openssl/frameworks/Crypto.xcframework/ios-arm64_x86_64-simulator/libcrypto.a"
-FREETYPE_INCLUDE_DIRS_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/freetype/build/ios/xcframework/FreeType.xcframework/ios-arm64_x86_64-simulator/Headers"
-FREETYPE_LIBRARY_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/freetype/build/ios/xcframework/FreeType.xcframework/ios-arm64_x86_64-simulator/libfreetype_simulator.a"
-LIBXML2_INCLUDE_DIR_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/libxml2/framework/libxml2.xcframework/ios-arm64_x86_64-simulator/libxml2.framework/Headers"
-LIBXML2_LIBRARIES_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/libxml2/framework/libxml2.xcframework/ios-arm64_x86_64-simulator/libxml2.framework/libxml2"
-PNG_PNG_INCLUDE_DIR_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/libpng/xcframework/libpng.xcframework/ios-arm64_x86_64-simulator/Headers"
-PNG_LIBRARY_SIMULATOR="/Users/pkokkinakis/Desktop/PoDoFo/libpng/xcframework/libpng.xcframework/ios-arm64_x86_64-simulator/libpng16.a"
+    # Check that FREETYPE_DIR argument has been passed
+    if [ -z "$FREETYPE_DIR" ]; then
+        echo "Error: FREETYPE_DIR argument not provided."
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        exit 1
+    fi
 
+    # Check that LIBPNG_DIR argument has been passed
+    if [ -z "$LIBPNG_DIR" ]; then
+        echo "Error: LIBPNG_DIR argument not provided."
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        exit 1
+    fi
 
-# Function to map platform to framework directory name
-map_platform_dir() {
-    local platform=$1
-    if [ "$platform" == "iphoneos" ]; then
-        echo "ios-arm64"
-    elif [ "$platform" == "iphonesimulator" ]; then
-        echo "ios-arm64-simulator"  # Changed to reflect that we're only using arm64 for simulator
-    else
-        echo "unknown"
+    # Check that LIBXML2_DIR argument has been passed
+    if [ -z "$LIBXML2_DIR" ]; then
+        echo "Error: LIBXML2_DIR argument not provided."
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        exit 1
+    fi
+
+    # Check that OPENSSL_DIR argument has been passed
+    if [ -z "$OPENSSL_DIR" ]; then
+        echo "Error: OPENSSL_DIR argument not provided."
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        exit 1
     fi
 }
 
-# Function to build for a specific platform and architecture
-build_for_platform_arch() {
-    local platform=$1
-    local arch=$2
-
-    echo "Building PoDoFo for $platform $arch..."
-
-    local build_dir="${BUILD_DIR}/${platform}-${arch}"
-    local install_dir="${INSTALL_DIR}/${platform}-${arch}"
-
-    mkdir -p "$build_dir"
-    cd "$build_dir"
-
-    # Base CMake arguments common to all platforms
-    CMAKE_ARGS=(
-        "-DCMAKE_TOOLCHAIN_FILE=${build_dir}/../../ios.toolchain.cmake"
-        "-DCMAKE_INSTALL_PREFIX=${install_dir}"
-        "-DCMAKE_BUILD_TYPE=Release"
-        "-DPODOFO_BUILD_STATIC=ON"
-        "-DPODOFO_BUILD_LIB_ONLY=ON"
-        "-DPODOFO_BUILD_TEST=OFF"
-        "-DPODOFO_BUILD_EXAMPLES=OFF"
-        "-DPODOFO_BUILD_UNSUPPORTED_TOOLS=OFF"
-        "-DPODOFO_HAVE_JPEG_LIB=OFF"
-        "-DPODOFO_HAVE_TIFF_LIB=OFF"
-        "-DPODOFO_HAVE_PNG_LIB=ON"
-        "-DPODOFO_HAVE_FONTCONFIG=OFF"
-        "-DCMAKE_SYSTEM_NAME=iOS"
-        "-DPLATFORM=${platform}"
-        "-DDEPLOYMENT_TARGET=16.5"
-        "-DENABLE_BITCODE=OFF"
-        "-DENABLE_ARC=OFF"
-        "-DENABLE_VISIBILITY=OFF"
-        "-DENABLE_STRICT_TRY_COMPILE=OFF"
-        "-DARCHS=${arch}"
-    )
-
-    # Set platform-specific paths
-    if [ "$platform" == "iphoneos" ]; then
-        # Device-specific paths
-        CMAKE_ARGS+=(
-            "-DZLIB_INCLUDE_DIR=${ZLIB_INCLUDE_DIR_IOS}"
-            "-DZLIB_LIBRARY=${ZLIB_LIBRARY_IOS}"
-            "-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR_IOS}"
-            "-DOPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR_IOS}"
-            "-DOPENSSL_SSL_LIBRARY=${OPENSSL_SSL_LIBRARY_IOS}"
-            "-DOPENSSL_CRYPTO_LIBRARY=${OPENSSL_CRYPTO_LIBRARY_IOS}"
-            "-DOPENSSL_LIBRARIES=${OPENSSL_LIBRARIES_IOS}"
-            "-DFREETYPE_INCLUDE_DIRS=${FREETYPE_INCLUDE_DIRS_IOS}"
-            "-DFREETYPE_LIBRARY=${FREETYPE_LIBRARY_IOS}"
-            "-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR_IOS}"
-            "-DLIBXML2_LIBRARIES=${LIBXML2_LIBRARIES_IOS}"
-            "-DPNG_PNG_INCLUDE_DIR=${PNG_PNG_INCLUDE_DIR_IOS}"
-            "-DPNG_LIBRARY=${PNG_LIBRARY_IOS}"
-        )
-    elif [ "$platform" == "iphonesimulator" ]; then
-        # Simulator-specific paths
-        CMAKE_ARGS+=(
-        		"-DZLIB_INCLUDE_DIR=${ZLIB_INCLUDE_DIR_SIMULATOR}"
-						"-DZLIB_LIBRARY=${ZLIB_LIBRARY_SIMULATOR}"
-						"-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR_SIMULATOR}"
-						"-DOPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR_SIMULATOR}"
-						"-DOPENSSL_SSL_LIBRARY=${OPENSSL_SSL_LIBRARY_SIMULATOR}"
-						"-DOPENSSL_CRYPTO_LIBRARY=${OPENSSL_CRYPTO_LIBRARY_SIMULATOR}"
-						"-DOPENSSL_LIBRARIES=${OPENSSL_LIBRARIES_SIMULATOR}"
-						"-DFREETYPE_INCLUDE_DIRS=${FREETYPE_INCLUDE_DIRS_SIMULATOR}"
-						"-DFREETYPE_LIBRARY=${FREETYPE_LIBRARY_SIMULATOR}"
-						"-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR_SIMULATOR}"
-						"-DLIBXML2_LIBRARIES=${LIBXML2_LIBRARIES_SIMULATOR}"
-						"-DPNG_PNG_INCLUDE_DIR=${PNG_PNG_INCLUDE_DIR_SIMULATOR}"
-						"-DPNG_LIBRARY=${PNG_LIBRARY_SIMULATOR}"
-        )
-    fi
-
-    echo "Running CMake with arguments: ${CMAKE_ARGS[@]}"
-    cmake -S "${PODOFO_SRC_DIR}" "${CMAKE_ARGS[@]}"
-    cmake --build . --config Release
-    cmake --install .
-
-    cd "${SCRIPT_DIR}"
-
-    # Copy missing openssl party headers
-    if [ "$platform" == "iphoneos" ]; then
-      cp -R "${OPENSSL_INCLUDE_DIR_IOS}/openssl" "${INSTALL_DIR}/iphoneos-arm64/include/"
-    elif [ "$platform" == "iphonesimulator" ]; then
-      cp -R "${OPENSSL_INCLUDE_DIR_SIMULATOR}/openssl" "${INSTALL_DIR}/iphonesimulator-arm64/include/"
-    fi
+function prepare() {
+    # Create directories if they don't exist
+    mkdir -p "$BUILD_DIR" "$FRAMEWORK_DIR"
 }
 
-# Clean previous builds
-rm -rf "${XCFRAMEWORK_DIR}"
-mkdir -p "${XCFRAMEWORK_DIR}"
+function build() {
+    # Create directories if they don't exist
+    mkdir -p "$BUILD_DIR" "$FRAMEWORK_DIR"
 
-# Build for device (arm64)
-echo "Building for iOS device (arm64)..."
-for arch in $DEVICE_ARCHS; do
-    build_for_platform_arch "iphoneos" "$arch"
-done
+    # Function to build for a specific platform and architecture
+    build_for_platform_arch() {
+        local platform=$1
+        local arch=$2
 
-# Build for simulator (arm64 only)
-echo "Building for iOS simulator..."
-for arch in $SIMULATOR_ARCHS; do
-    build_for_platform_arch "iphonesimulator" "$arch"
-done
+        echo "Building PoDoFo for $platform $arch..."
 
-# Create XCFramework structure
-echo "Creating XCFramework structure..."
+        local install_dir="${INSTALL_DIR}/${platform}-${arch}"
 
-# Create framework directories with proper structure
-DEVICE_FRAMEWORK_DIR="${XCFRAMEWORK_DIR}/PoDoFo.xcframework/ios-arm64/PoDoFo.framework"
-SIMULATOR_FRAMEWORK_DIR="${XCFRAMEWORK_DIR}/PoDoFo.xcframework/ios-arm64-simulator/PoDoFo.framework"
+        mkdir -p "$install_dir"
 
-mkdir -p "${DEVICE_FRAMEWORK_DIR}/Headers"
-mkdir -p "${SIMULATOR_FRAMEWORK_DIR}/Headers"
+        # Handle devide and simulator paths
+        if [ "$platform" == "iphoneos" ]; then
+            sim_suffix=""
+            libft_suffix=""
+        else
+            sim_suffix="_x86_64-simulator"
+            libft_suffix="_simulator"
+        fi
 
-# Create module map for device
-mkdir -p "${DEVICE_FRAMEWORK_DIR}/Modules"
-cat > "${DEVICE_FRAMEWORK_DIR}/Modules/module.modulemap" << EOF
+        # Base CMake arguments common to all platforms
+        CMAKE_ARGS=(
+            "-DCMAKE_TOOLCHAIN_FILE=${SOURCE_DIR}/scripts/ios/podofo/ios.toolchain.cmake"
+            "-DCMAKE_INSTALL_PREFIX=${install_dir}"
+            "-DCMAKE_BUILD_TYPE=Release"
+            "-DPODOFO_BUILD_STATIC=ON"
+            "-DPODOFO_BUILD_LIB_ONLY=ON"
+            "-DPODOFO_BUILD_TEST=OFF"
+            "-DPODOFO_BUILD_EXAMPLES=OFF"
+            "-DPODOFO_BUILD_UNSUPPORTED_TOOLS=OFF"
+            "-DPODOFO_HAVE_JPEG_LIB=OFF"
+            "-DPODOFO_HAVE_TIFF_LIB=OFF"
+            "-DPODOFO_HAVE_PNG_LIB=ON"
+            "-DPODOFO_HAVE_FONTCONFIG=OFF"
+            "-DCMAKE_SYSTEM_NAME=iOS"
+            "-DPLATFORM=${platform}"
+            "-DDEPLOYMENT_TARGET=${MIN_IOS_VERSION}"
+            "-DENABLE_BITCODE=OFF"
+            "-DENABLE_ARC=OFF"
+            "-DENABLE_VISIBILITY=OFF"
+            "-DENABLE_STRICT_TRY_COMPILE=OFF"
+            "-DARCHS=${arch}"
+            "-DOPENSSL_INCLUDE_DIR=${OPENSSL_DIR}/xcframework/SSL.xcframework/ios-${arch}${sim_suffix}/Headers"
+            "-DOPENSSL_SSL_LIBRARY=${OPENSSL_DIR}/xcframework/SSL.xcframework/ios-${arch}${sim_suffix}/libssl.a"
+            "-DOPENSSL_CRYPTO_LIBRARY=${OPENSSL_DIR}/xcframework/Crypto.xcframework/ios-${arch}${sim_suffix}/libcrypto.a"
+            "-DOPENSSL_LIBRARIES=${OPENSSL_DIR}/xcframework/SSL.xcframework/ios-${arch}${sim_suffix}/libssl.a;${OPENSSL_DIR}/xcframework/Crypto.xcframework/ios-${arch}${sim_suffix}/libcrypto.a"
+            "-DFREETYPE_INCLUDE_DIRS=${FREETYPE_DIR}/xcframework/FreeType.xcframework/ios-${arch}${sim_suffix}/Headers"
+            "-DFREETYPE_LIBRARY=${FREETYPE_DIR}/xcframework/FreeType.xcframework/ios-${arch}${sim_suffix}/libfreetype.a"
+            "-DLIBXML2_INCLUDE_DIR=${LIBXML2_DIR}/xcframework/libxml2.xcframework/ios-${arch}${sim_suffix}/libxml2.framework/Headers"
+            "-DLIBXML2_LIBRARIES=${LIBXML2_DIR}/xcframework/libxml2.xcframework/ios-${arch}${sim_suffix}/libxml2.framework/libxml2"
+            "-DPNG_PNG_INCLUDE_DIR=${LIBPNG_DIR}/xcframework/libpng.xcframework/ios-${arch}${sim_suffix}/Headers"
+            "-DPNG_LIBRARY=${LIBPNG_DIR}/xcframework/libpng.xcframework/ios-${arch}${sim_suffix}/libpng16.a"
+        )
+
+        echo "Running CMake with arguments: ${CMAKE_ARGS[@]}"
+        cmake -S "${SOURCE_DIR}" "${CMAKE_ARGS[@]}"
+        cmake --build . --config Release
+        cmake --install .
+
+        cp -R "${OPENSSL_DIR}/xcframework/SSL.xcframework/ios-${arch}${sim_suffix}/Headers/openssl" "${INSTALL_DIR}/${platform}-${arch}/include/"
+    }
+
+    # Build for device
+    for arch in $DEVICE_ARCHS; do
+        echo "Building for iOS device ($arch)..."
+        build_for_platform_arch "iphoneos" "$arch"
+    done
+
+    # Build for simulator
+    for arch in $SIMULATOR_ARCHS; do
+        echo "Building for iOS simulator ($arch)..."
+        build_for_platform_arch "iphonesimulator" "$arch"
+    done
+
+    # Create XCFramework structure
+    echo "Creating XCFramework structure..."
+
+    # Create framework directories with proper structure
+    DEVICE_FRAMEWORK_DIR="${FRAMEWORK_DIR}/PoDoFo.xcframework/ios-arm64/PoDoFo.framework"
+    SIMULATOR_FRAMEWORK_DIR="${FRAMEWORK_DIR}/PoDoFo.xcframework/ios-arm64-simulator/PoDoFo.framework"
+
+    # Make framework folders
+    mkdir -p "${DEVICE_FRAMEWORK_DIR}/Headers" "${SIMULATOR_FRAMEWORK_DIR}/Headers"
+
+    createModuleMapFile() {
+        local framework_dir=$1
+
+        mkdir -p "${framework_dir}/Modules"
+        cat > "${framework_dir}/Modules/module.modulemap" << EOF
 framework module PoDoFo {
     umbrella header "PodofoWrapper.h"
     explicit module Base {
@@ -203,100 +183,74 @@ framework module PoDoFo {
     link "c++abi"
 }
 EOF
-
-# Create module map for simulator
-mkdir -p "${SIMULATOR_FRAMEWORK_DIR}/Modules"
-cat > "${SIMULATOR_FRAMEWORK_DIR}/Modules/module.modulemap" << EOF
-framework module PoDoFo {
-    umbrella header "PodofoWrapper.h"
-    explicit module Base {
-        header "PodofoWrapper.h"
-        export *
     }
-    export *
-    link "c++"
-    link "c++abi"
-}
-EOF
 
-# Copy headers and libraries
-cp -R "${INSTALL_DIR}/iphoneos-arm64/include/podofo/" "${DEVICE_FRAMEWORK_DIR}/Headers/"
-cp -R "${INSTALL_DIR}/iphonesimulator-arm64/include/podofo/" "${SIMULATOR_FRAMEWORK_DIR}/Headers/"
-cp -R "${OPENSSL_INCLUDE_DIR_IOS}/openssl" "${DEVICE_FRAMEWORK_DIR}/Headers/"
-cp -R "${OPENSSL_INCLUDE_DIR_SIMULATOR}/openssl" "${SIMULATOR_FRAMEWORK_DIR}/Headers/"
+    createModuleMapFile "$DEVICE_FRAMEWORK_DIR"
+    createModuleMapFile "$SIMULATOR_FRAMEWORK_DIR"
 
-# Compile PodofoWrapper class for device
-echo "Compiling PodofoWrapper class for device..."
-clang++ -c "${SCRIPT_DIR}/PodofoWrapper.mm" \
-    -o "${BUILD_DIR}/iphoneos-arm64/PodofoWrapper.o" \
-    -I"${SCRIPT_DIR}" \
-    -I"${INSTALL_DIR}/iphoneos-arm64/include" \
-    -I"${PNG_PNG_INCLUDE_DIR_IOS}" \
-    -I"${ZLIB_INCLUDE_DIR_IOS}" \
-    -arch arm64 \
-    -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
-    -fobjc-arc \
-    -fmodules \
-    -fobjc-abi-version=2 \
-    -fobjc-runtime=ios-16.5 \
-    -std=c++17 \
-    -stdlib=libc++ \
-    -I$(xcrun --sdk iphoneos --show-sdk-path)/usr/include/c++/v1
+    # Copy headers and libraries
+    cp -R "${INSTALL_DIR}/iphoneos-arm64/include/podofo/" "${DEVICE_FRAMEWORK_DIR}/Headers/"
+    cp -R "${INSTALL_DIR}/iphonesimulator-arm64/include/podofo/" "${SIMULATOR_FRAMEWORK_DIR}/Headers/"
+    cp -R "${INSTALL_DIR}/iphoneos-arm64/include/openssl" "${DEVICE_FRAMEWORK_DIR}/Headers/"
+    cp -R "${INSTALL_DIR}/iphonesimulator-arm64/include/openssl" "${SIMULATOR_FRAMEWORK_DIR}/Headers/"
 
-# Compile PodofoWrapper class for simulator
-echo "Compiling Podofo class for simulator..."
-clang++ -c "${SCRIPT_DIR}/PodofoWrapper.mm" \
-    -o "${BUILD_DIR}/iphonesimulator-arm64/PodofoWrapper.o" \
-    -I"${SCRIPT_DIR}" \
-    -I"${INSTALL_DIR}/iphonesimulator-arm64/include" \
-    -I"${PNG_PNG_INCLUDE_DIR_SIMULATOR}" \
-    -I"${ZLIB_INCLUDE_DIR_SIMULATOR}" \
-    -arch arm64 \
-    -isysroot $(xcrun --sdk iphonesimulator --show-sdk-path) \
-    -fobjc-arc \
-    -fmodules \
-    -fobjc-abi-version=2 \
-    -fobjc-runtime=ios-16.5 \
-    -std=c++17 \
-    -stdlib=libc++ \
-    -I$(xcrun --sdk iphonesimulator --show-sdk-path)/usr/include/c++/v1
+    compilePodofoWrapper() {
+        local platform=$1
+        local arch=$2
 
-# Copy PodofoWrapper header to framework
-cp "${SCRIPT_DIR}/PodofoWrapper.h" "${DEVICE_FRAMEWORK_DIR}/Headers/"
-cp "${SCRIPT_DIR}/PodofoWrapper.h" "${SIMULATOR_FRAMEWORK_DIR}/Headers/"
+        # Compile PodofoWrapper class
+        echo "Compiling PodofoWrapper class for ($platform/$arch)..."
+        clang++ -c "${SOURCE_DIR}/scripts/ios/podofo/PodofoWrapper.mm" \
+            -o "${INSTALL_DIR}/${platform}-${arch}/PodofoWrapper.o" \
+            -I"${SOURCE_DIR}/scripts/ios/podofo" \
+            -I"${INSTALL_DIR}/${platform}-${arch}/include" \
+            -arch "${arch}" \
+            -isysroot $(xcrun --sdk "${platform}" --show-sdk-path) \
+            -fobjc-arc \
+            -fmodules \
+            -fobjc-abi-version=2 \
+            -fobjc-runtime=ios-16.5 \
+            -std=c++17 \
+            -stdlib=libc++ \
+            -I$(xcrun --sdk "${platform}" --show-sdk-path)/usr/include/c++/v1
+    }
 
-# Combine all libraries into a single static library for each platform
-echo "Combining libraries for device..."
-libtool -static -o "${DEVICE_FRAMEWORK_DIR}/PoDoFo" \
-    "${INSTALL_DIR}/iphoneos-arm64/lib/libpodofo.a" \
-    "${INSTALL_DIR}/iphoneos-arm64/lib/libpodofo_private.a" \
-    "${INSTALL_DIR}/iphoneos-arm64/lib/libpodofo_3rdparty.a" \
-    "${BUILD_DIR}/iphoneos-arm64/PodofoWrapper.o" \
-    "${ZLIB_LIBRARY_IOS}" \
-    "${OPENSSL_SSL_LIBRARY_IOS}" \
-    "${OPENSSL_CRYPTO_LIBRARY_IOS}" \
-    ${OPENSSL_LIBRARIES_IOS//;/ } \
-    "${FREETYPE_LIBRARY_IOS}" \
-    "${PNG_LIBRARY_IOS}" \
-    "${LIBXML2_LIBRARIES_IOS}"
+    compilePodofoWrapper "iphoneos" "arm64"
+    compilePodofoWrapper "iphonesimulator" "arm64"
 
-echo "Combining libraries for simulator..."
-libtool -static -o "${SIMULATOR_FRAMEWORK_DIR}/PoDoFo" \
-    "${INSTALL_DIR}/iphonesimulator-arm64/lib/libpodofo.a" \
-    "${INSTALL_DIR}/iphonesimulator-arm64/lib/libpodofo_private.a" \
-    "${INSTALL_DIR}/iphonesimulator-arm64/lib/libpodofo_3rdparty.a" \
-    "${BUILD_DIR}/iphonesimulator-arm64/PodofoWrapper.o" \
-    "${ZLIB_LIBRARY_SIMULATOR}" \
-    "${OPENSSL_SSL_LIBRARY_SIMULATOR}" \
-    "${OPENSSL_CRYPTO_LIBRARY_SIMULATOR}" \
-    ${OPENSSL_LIBRARIES_SIMULATOR//;/ } \
-    "${FREETYPE_LIBRARY_SIMULATOR}" \
-    "${PNG_LIBRARY_SIMULATOR}" \
-    "${LIBXML2_LIBRARIES_SIMULATOR}"
+    # Copy PodofoWrapper header to framework
+    cp "${SOURCE_DIR}/scripts/ios/podofo/PodofoWrapper.h" "${DEVICE_FRAMEWORK_DIR}/Headers/"
+    cp "${SOURCE_DIR}/scripts/ios/podofo/PodofoWrapper.h" "${SIMULATOR_FRAMEWORK_DIR}/Headers/"
+
+    combineDependenciesInPoDoFo() {
+        local platform=$1
+        local arch=$2
+        local framework_dir=$3
+
+        # Combine all libraries into a single static library
+        echo "Combining libraries for (${platform}/${arch})..."
+
+        libtool -static -o "${framework_dir}/PoDoFo" \
+            "${INSTALL_DIR}/${platform}-${arch}/lib/libpodofo.a" \
+            "${INSTALL_DIR}/${platform}-${arch}/lib/libpodofo_private.a" \
+            "${INSTALL_DIR}/${platform}-${arch}/lib/libpodofo_3rdparty.a" \
+            "${INSTALL_DIR}/${platform}-${arch}/PodofoWrapper.o" \
+            "${OPENSSL_DIR}/xcframework/SSL.xcframework/ios-${arch}${sim_suffix}/libssl.a" \
+            "${OPENSSL_DIR}/xcframework/Crypto.xcframework/ios-${arch}${sim_suffix}/libcrypto.a" \
+            "${FREETYPE_DIR}/xcframework/FreeType.xcframework/ios-${arch}${sim_suffix}/libfreetype${libft_suffix}.a" \
+            "${LIBPNG_DIR}/xcframework/libpng.xcframework/ios-${arch}${sim_suffix}/libpng16.a" \
+            "${LIBXML2_DIR}/xcframework/libxml2.xcframework/ios-${arch}${sim_suffix}/libxml2.framework/libxml2"
+    }
+
+    combineDependenciesInPoDoFo "iphoneos" "arm64" "${DEVICE_FRAMEWORK_DIR}"
+    combineDependenciesInPoDoFo "iphonesimulator" "arm64" "${SIMULATOR_FRAMEWORK_DIR}"
 
 
-# Create Info.plist files
-cat > "${DEVICE_FRAMEWORK_DIR}/Info.plist" << EOF
+    createInnerInfoPlistFile() {
+        local framework_dir=$1
+
+        # Create Info.plist files
+        cat > "${framework_dir}/Info.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -322,11 +276,13 @@ cat > "${DEVICE_FRAMEWORK_DIR}/Info.plist" << EOF
 </dict>
 </plist>
 EOF
+    }
 
-cp "${DEVICE_FRAMEWORK_DIR}/Info.plist" "${SIMULATOR_FRAMEWORK_DIR}/Info.plist"
+    createInnerInfoPlistFile "${DEVICE_FRAMEWORK_DIR}"
+    createInnerInfoPlistFile "${SIMULATOR_FRAMEWORK_DIR}"
 
-# Create XCFramework Info.plist
-cat > "${XCFRAMEWORK_DIR}/PoDoFo.xcframework/Info.plist" << EOF
+    # Create Main XCFramework Info.plist
+    cat > "${FRAMEWORK_DIR}/PoDoFo.xcframework/Info.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -374,4 +330,13 @@ cat > "${XCFRAMEWORK_DIR}/PoDoFo.xcframework/Info.plist" << EOF
 </plist>
 EOF
 
-echo "XCFramework created at: ${XCFRAMEWORK_DIR}/PoDoFo.xcframework"
+    echo "XCFramework created at: ${FRAMEWORK_DIR}/PoDoFo.xcframework"
+}
+
+check
+
+if [ "$SKIP_PREPARE" -eq 0 ]; then
+    prepare
+fi
+
+build
