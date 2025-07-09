@@ -17,6 +17,7 @@ FREETYPE_DIR="$2"
 LIBPNG_DIR="$3"
 LIBXML2_DIR="$4"
 OPENSSL_DIR="$5"
+ZLIB_DIR="$6"
 MIN_IOS_VERSION="16.5"
 
 # Define architectures and platforms
@@ -30,6 +31,7 @@ FREETYPE_DIR="$(cd "$(dirname "$FREETYPE_DIR")" && pwd)/$(basename "$FREETYPE_DI
 LIBPNG_DIR="$(cd "$(dirname "$LIBPNG_DIR")" && pwd)/$(basename "$LIBPNG_DIR")"
 LIBXML2_DIR="$(cd "$(dirname "$LIBXML2_DIR")" && pwd)/$(basename "$LIBXML2_DIR")"
 OPENSSL_DIR="$(cd "$(dirname "$OPENSSL_DIR")" && pwd)/$(basename "$OPENSSL_DIR")"
+ZLIB_DIR="$(cd "$(dirname "$ZLIB_DIR")" && pwd)/$(basename "$ZLIB_DIR")"
 
 # Define directories
 BUILD_DIR="$TARGET_DIR/build"
@@ -41,35 +43,42 @@ function check() {
     # Check that TARGET_DIR argument has been passed
     if [ -z "$TARGET_DIR" ]; then
         echo "Error: TARGET_DIR argument not provided."
-        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR> <ZLIB_DIR>"
         exit 1
     fi
 
     # Check that FREETYPE_DIR argument has been passed
     if [ -z "$FREETYPE_DIR" ]; then
         echo "Error: FREETYPE_DIR argument not provided."
-        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR> <ZLIB_DIR>"
         exit 1
     fi
 
     # Check that LIBPNG_DIR argument has been passed
     if [ -z "$LIBPNG_DIR" ]; then
         echo "Error: LIBPNG_DIR argument not provided."
-        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR> <ZLIB_DIR>"
         exit 1
     fi
 
     # Check that LIBXML2_DIR argument has been passed
     if [ -z "$LIBXML2_DIR" ]; then
         echo "Error: LIBXML2_DIR argument not provided."
-        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR> <ZLIB_DIR>"
         exit 1
     fi
 
     # Check that OPENSSL_DIR argument has been passed
     if [ -z "$OPENSSL_DIR" ]; then
         echo "Error: OPENSSL_DIR argument not provided."
-        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR>"
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR> <ZLIB_DIR>"
+        exit 1
+    fi
+
+    # Check that ZLIB_DIR argument has been passed
+    if [ -z "$ZLIB_DIR" ]; then
+        echo "Error: ZLIB_DIR argument not provided."
+        echo "Usage: $0 <TARGET_DIR> <FREETYPE_DIR> <LIBPNG_DIR> <LIBXML2_DIR> <OPENSSL_DIR> <ZLIB_DIR>"
         exit 1
     fi
 }
@@ -125,6 +134,9 @@ function build() {
             "-DENABLE_VISIBILITY=OFF"
             "-DENABLE_STRICT_TRY_COMPILE=OFF"
             "-DARCHS=${arch}"
+            "-DZLIB_INCLUDE_DIR=${ZLIB_DIR}/xcframework/zlib.xcframework/ios-${arch}${sim_suffix}/Headers"
+            "-DZLIB_LIBRARY=${ZLIB_DIR}/xcframework/zlib.xcframework/ios-${arch}${sim_suffix}/libz.a"
+            "-DOPENSSL_ROOT_DIR=${OPENSSL_DIR}/xcframework"
             "-DOPENSSL_INCLUDE_DIR=${OPENSSL_DIR}/xcframework/SSL.xcframework/ios-${arch}${sim_suffix}/Headers"
             "-DOPENSSL_SSL_LIBRARY=${OPENSSL_DIR}/xcframework/SSL.xcframework/ios-${arch}${sim_suffix}/libssl.a"
             "-DOPENSSL_CRYPTO_LIBRARY=${OPENSSL_DIR}/xcframework/Crypto.xcframework/ios-${arch}${sim_suffix}/libcrypto.a"
@@ -200,10 +212,13 @@ EOF
 
         # Compile PodofoWrapper class
         echo "Compiling PodofoWrapper class for ($platform/$arch)..."
+
         clang++ -c "${SOURCE_DIR}/scripts/ios/podofo/PodofoWrapper.mm" \
             -o "${INSTALL_DIR}/${platform}-${arch}/PodofoWrapper.o" \
-            -I"${SOURCE_DIR}/scripts/ios/podofo" \
+            -I"${SOURCE_DIR}" \
             -I"${INSTALL_DIR}/${platform}-${arch}/include" \
+            -I"${LIBPNG_DIR}/xcframework/libpng.xcframework/ios-${arch}${sim_suffix}/Headers" \
+            -I"${ZLIB_DIR}/xcframework/zlib.xcframework/ios-${arch}${sim_suffix}/Headers" \
             -arch "${arch}" \
             -isysroot $(xcrun --sdk "${platform}" --show-sdk-path) \
             -fobjc-arc \
@@ -227,14 +242,26 @@ EOF
         local arch=$2
         local framework_dir=$3
 
+        # Handle devide and simulator paths
+        if [ "$platform" == "iphoneos" ]; then
+            sim_suffix=""
+            libft_suffix=""
+        else
+            sim_suffix="_x86_64-simulator"
+            libft_suffix="_simulator"
+        fi
+
         # Combine all libraries into a single static library
         echo "Combining libraries for (${platform}/${arch})..."
+        echo "simsuffix: ${sim_suffix}"
+        echo "libft_suffix: ${libft_suffix}"
 
         libtool -static -o "${framework_dir}/PoDoFo" \
             "${INSTALL_DIR}/${platform}-${arch}/lib/libpodofo.a" \
             "${INSTALL_DIR}/${platform}-${arch}/lib/libpodofo_private.a" \
             "${INSTALL_DIR}/${platform}-${arch}/lib/libpodofo_3rdparty.a" \
             "${INSTALL_DIR}/${platform}-${arch}/PodofoWrapper.o" \
+            "${ZLIB_DIR}/xcframework/zlib.xcframework/ios-${arch}${sim_suffix}/libz.a" \
             "${OPENSSL_DIR}/xcframework/SSL.xcframework/ios-${arch}${sim_suffix}/libssl.a" \
             "${OPENSSL_DIR}/xcframework/Crypto.xcframework/ios-${arch}${sim_suffix}/libcrypto.a" \
             "${FREETYPE_DIR}/xcframework/FreeType.xcframework/ios-${arch}${sim_suffix}/libfreetype${libft_suffix}.a" \

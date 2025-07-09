@@ -81,6 +81,9 @@ function build() {
 
         echo "Building OpenSSL for ${ARCH} (${PLATFORM}) - ${BUILD_TYPE}..."
 
+        # Clean previous builds
+        make clean || true
+
         # Prepare build directory - use BUILD_TYPE to make directories unique
         ARCH_BUILD_DIR="${INSTALL_DIR}/${ARCH}-${BUILD_TYPE}"
         mkdir -p "${ARCH_BUILD_DIR}"
@@ -121,14 +124,14 @@ function build() {
     build_for_arch "arm64" "iPhoneOS" "${IPHONEOS_SDK_PATH}" "device"
 
     # Build for iOS simulator (x86_64 and arm64)
-    build_for_arch "x86_64" "iPhoneSimulator" "${IPHONESIMULATOR_SDK_PATH}" "simulator-x86_64"
-    build_for_arch "arm64" "iPhoneSimulator" "${IPHONESIMULATOR_SDK_PATH}" "simulator-arm64"
+    build_for_arch "x86_64" "iPhoneSimulator" "${IPHONESIMULATOR_SDK_PATH}" "simulator"
+    build_for_arch "arm64" "iPhoneSimulator" "${IPHONESIMULATOR_SDK_PATH}" "simulator"
 
     # Create fat library for simulator
     echo "Creating fat libraries for simulator..."
     mkdir -p "${INSTALL_DIR}/simulator/lib"
-    lipo -create "${INSTALL_DIR}/x86_64-simulator-x86_64/lib/libssl.a" "${INSTALL_DIR}/arm64-simulator-arm64/lib/libssl.a" -output "${INSTALL_DIR}/simulator/lib/libssl.a"
-    cp "${INSTALL_DIR}/x86_64-simulator-x86_64/lib/libcrypto.a" "${INSTALL_DIR}/simulator/lib/libcrypto.a"
+    lipo -create "${INSTALL_DIR}/x86_64-simulator/lib/libssl.a" "${INSTALL_DIR}/arm64-simulator/lib/libssl.a" -output "${INSTALL_DIR}/simulator/lib/libssl.a"
+    lipo -create "${INSTALL_DIR}/x86_64-simulator/lib/libcrypto.a" "${INSTALL_DIR}/arm64-simulator/lib/libcrypto.a" -output "${INSTALL_DIR}/simulator/lib/libcrypto.a"
 
     # Create XCFrameworks
     echo "Creating XCFrameworks..."

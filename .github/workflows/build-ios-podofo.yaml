@@ -19,6 +19,10 @@ on:
         description: "openssl version"
         required: true
         default: "3.2.1"
+      zlib_version:
+        description: "zlib version"
+        required: true
+        default: "1.3.1"
 
 jobs:
   build-ios-freetype:
@@ -103,7 +107,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Cache libxml2 build
         id: cache-ios-libxml2
         uses: actions/cache@v4
@@ -176,6 +180,43 @@ jobs:
           path: build/ios/openssl/install
           overwrite: true
 
+  build-ios-zlib:
+    runs-on: macos-latest
+    env:
+      ZLIB_VERSION: ${{ github.event.inputs.zlib_version || '1.3.1' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache zlib build
+        id: cache-ios-zlib
+        uses: actions/cache@v4
+        with:
+          path: build/ios/zlib/install
+          key: deps-ios-zlib-${{ env.ZLIB_VERSION }}
+
+      - name: Download and extract zlib
+        if: steps.cache-ios-zlib.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p build/ios/zlib/download/ build/ios/zlib/build/
+          curl -L "https://zlib.net/zlib-${{ env.ZLIB_VERSION }}.tar.gz" -o build/ios/zlib/download/zlib-${{ env.ZLIB_VERSION }}.tar.gz
+          tar xzf build/ios/zlib/download/zlib-${{ env.ZLIB_VERSION }}.tar.gz -C build/ios/zlib/build/
+
+      - name: Build from source
+        if: steps.cache-ios-zlib.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/ios/zlib/build.sh
+          ./scripts/ios/zlib/build.sh build/ios/zlib ${{ env.ZLIB_VERSION }} --skip-prepare
+        env:
+          ZLIB_VERSION: ${{ env.ZLIB_VERSION }}
+
+      - name: Upload zlib artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deps-ios-zlib
+          path: build/ios/zlib/install
+          overwrite: true
+
   build-ios-podofo:
     runs-on: macos-latest
     needs:
@@ -184,6 +225,7 @@ jobs:
         build-ios-libpng,
         build-ios-libxml2,
         build-ios-openssl,
+        build-ios-zlib,
       ]
 
     steps:
@@ -218,11 +260,18 @@ jobs:
           name: deps-ios-openssl
           path: deps-ios/openssl
 
+      - name: Download zlib artifact
+        uses: actions/download-artifact@v4
+        id: deps-ios-zlib
+        with:
+          name: deps-ios-zlib
+          path: deps-ios/zlib
+
       - name: Build from source
         run: |
           chmod +x scripts/ios/podofo/build.sh
           mkdir -p build/ios/podofo
-          ./scripts/ios/podofo/build.sh build/ios/podofo ${{ steps.deps-ios-freetype.outputs.download-path }} ${{ steps.deps-ios-libpng.outputs.download-path }} ${{ steps.deps-ios-libxml2.outputs.download-path }} ${{ steps.deps-ios-openssl.outputs.download-path }}
+          ./scripts/ios/podofo/build.sh build/ios/podofo ${{ steps.deps-ios-freetype.outputs.download-path }} ${{ steps.deps-ios-libpng.outputs.download-path }} ${{ steps.deps-ios-libxml2.outputs.download-path }} ${{ steps.deps-ios-openssl.outputs.download-path }} ${{ steps.deps-ios-zlib.outputs.download-path }}
 
       - name: Upload podofo artifacts
         uses: actions/upload-artifact@v4
