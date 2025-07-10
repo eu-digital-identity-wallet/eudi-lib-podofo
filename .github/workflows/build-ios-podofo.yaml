@@ -2,6 +2,7 @@ name: Build PoDoFo for iOS
 
 on:
   push:
+  pull_request:
     types: [ opened, reopened, synchronize ]
   workflow_dispatch:
     inputs:
@@ -290,6 +291,7 @@ jobs:
   manage-swift-package:
     runs-on: macos-latest
     needs: build-ios-podofo
+    if: github.event_name != 'pull_request' 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -353,6 +355,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update PoDoFo XCFramework - Auto build $(date '+%Y-%m-%d %H:%M:%S')"
+            git commit -m "[CI Automation] Update PoDoFo XCFramework - $(date '+%Y-%m-%d %H:%M:%S')"
             git push origin ${{ github.ref_name }}
           fi
