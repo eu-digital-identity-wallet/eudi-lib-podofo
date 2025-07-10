@@ -2,7 +2,6 @@ name: Build PoDoFo for iOS
 
 on:
   push:
-  pull_request:
     types: [ opened, reopened, synchronize ]
   workflow_dispatch:
     inputs:
