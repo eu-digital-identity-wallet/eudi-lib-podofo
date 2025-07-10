@@ -5,7 +5,7 @@
 # Creates a single XCFramework for each library with two slices:
 # - One for device (arm64)
 # - One fat library for simulator (arm64 + x86_64)
-# Minimum iOS version: 16.0
+# Minimum iOS version: 14.0
 
 set -e
 
@@ -35,7 +35,7 @@ TEMP_DIR="$TARGET_DIR/temp"
 FAT_DIR="$TARGET_DIR/fat"
 
 # Configuration
-MIN_IOS_VERSION="16.0"
+MIN_IOS_VERSION="14.0"
 
 # Source files directory
 SRC_DIR=$(pwd)

@@ -18,7 +18,7 @@ LIBPNG_DIR="$3"
 LIBXML2_DIR="$4"
 OPENSSL_DIR="$5"
 ZLIB_DIR="$6"
-MIN_IOS_VERSION="16.5"
+MIN_IOS_VERSION="14"
 
 # Define architectures and platforms
 DEVICE_ARCHS="arm64"
