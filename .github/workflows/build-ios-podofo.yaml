@@ -32,6 +32,9 @@ permissions:
   actions: read
   packages: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   build-ios-freetype:
     runs-on: macos-latest
