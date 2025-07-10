@@ -291,10 +291,12 @@ jobs:
   manage-swift-package:
     runs-on: macos-latest
     needs: build-ios-podofo
-    if: github.event_name != 'pull_request' 
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository_owner == 'eu-digital-identity-wallet'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ADMIN_PAT }}
 
       - name: Download podofo artifacts for packaging
         uses: actions/download-artifact@v4
@@ -358,3 +360,5 @@ jobs:
             git commit -m "[CI Automation] Update PoDoFo XCFramework - $(date '+%Y-%m-%d %H:%M:%S')"
             git push origin ${{ github.ref_name }}
           fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
