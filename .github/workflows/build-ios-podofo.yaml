@@ -349,7 +349,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config user.name "${GITHUB_ACTOR}"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
 
       - name: Commit and push changes
         run: |
@@ -357,7 +358,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "[CI Automation] Update PoDoFo XCFramework - $(date '+%Y-%m-%d %H:%M:%S')"
+            git commit -m "[CI Automation] Update PoDoFo XCFramework - $(date '+%Y-%m-%d %H:%M:%S') [skip ci]"
             git push origin ${{ github.ref_name }}
           fi
         env:
