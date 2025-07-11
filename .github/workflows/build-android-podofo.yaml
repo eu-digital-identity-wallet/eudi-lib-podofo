@@ -39,6 +39,10 @@ on:
         required: true
         default: "1.2.13"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-android-brotli:
     runs-on: ubuntu-latest
