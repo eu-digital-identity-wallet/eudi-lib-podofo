@@ -588,7 +588,7 @@ jobs:
         uses: actions/download-artifact@v4
         id: deps-android-podofo
         with:
-          name: deps-android-podofo-*
+          pattern: deps-android-podofo-*
           merge-multiple: true
           path: deps-android/podofo
 
