@@ -518,7 +518,7 @@ jobs:
           path: build/android/podofo/install
           overwrite: true
 
-  build-android-podofo-aar:
+  publish-android-podofo-aar:
     runs-on: ubuntu-latest
     needs: build-android-podofo
 

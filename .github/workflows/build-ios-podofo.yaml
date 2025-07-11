@@ -292,7 +292,7 @@ jobs:
           path: build/ios/podofo/install
           overwrite: true
 
-  manage-swift-package:
+  publish-swift-package:
     runs-on: macos-latest
     needs: build-ios-podofo
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository_owner == 'eu-digital-identity-wallet'
