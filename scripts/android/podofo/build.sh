@@ -3,10 +3,6 @@
 # Exit on error
 set -e
 
-# PoDoFo Configuration
-PODOFO_VERSION="master"
-PODOFO_REPO_NAME="EUDI_PoDoFo"
-
 SKIP_PREPARE=0
 # Parse arguments
 for arg in "$@"; do
@@ -23,6 +19,7 @@ FREETYPE_DIR="$3"
 LIBPNG_DIR="$4"
 LIBXML2_DIR="$5"
 OPENSSL_DIR="$6"
+TARGET_ARCH="$7"
 
 # Convert TARGET_DIR to absolute path
 TARGET_DIR="$(cd "$(dirname "$TARGET_DIR")" && pwd)/$(basename "$TARGET_DIR")"
@@ -35,6 +32,11 @@ INSTALL_DIR="$TARGET_DIR/install"
 # Define architectures to build for
 ARCHS=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
 API_LEVEL=21
+
+# If TARGET_ARCH is specified, only build for that architecture
+if [ -n "$TARGET_ARCH" ]; then
+    ARCHS=("$TARGET_ARCH")
+fi
 
 function check() {
     # Check that NDK_DIR argument has been passed

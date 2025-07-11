@@ -456,6 +456,10 @@ jobs:
         build-android-zlib,
       ]
 
+    strategy:
+      matrix:
+        arch: ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -502,14 +506,14 @@ jobs:
         run: |
           chmod +x scripts/android/podofo/build.sh
           mkdir -p build/android/podofo
-          ./scripts/android/podofo/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/podofo ${{ steps.deps-android-freetype.outputs.download-path }} ${{ steps.deps-android-libpng.outputs.download-path }} ${{ steps.deps-android-libxml2.outputs.download-path }} ${{ steps.deps-android-openssl.outputs.download-path }}
+          ./scripts/android/podofo/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/podofo ${{ steps.deps-android-freetype.outputs.download-path }} ${{ steps.deps-android-libpng.outputs.download-path }} ${{ steps.deps-android-libxml2.outputs.download-path }} ${{ steps.deps-android-openssl.outputs.download-path }} ${{ matrix.arch }}
         env:
           NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
 
       - name: Upload podofo artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: deps-android-podofo
+          name: deps-android-podofo-${{ matrix.arch }}
           path: build/android/podofo/install
           overwrite: true
 
@@ -568,19 +572,20 @@ jobs:
           name: deps-android-openssl
           path: deps-android/openssl
 
-      - name: Download podofo artifact
-        uses: actions/download-artifact@v4
-        id: deps-android-podofo
-        with:
-          name: deps-android-podofo
-          path: deps-android/podofo
-
       - name: Download zlib artifact
         uses: actions/download-artifact@v4
         id: deps-android-zlib
         with:
           name: deps-android-zlib
           path: deps-android/zlib
+
+      - name: Download podofo artifact
+        uses: actions/download-artifact@v4
+        id: deps-android-podofo
+        with:
+          name: deps-android-podofo-*
+          merge-multiple: true
+          path: deps-android/podofo
 
       - name: Organize libs
         run: |
