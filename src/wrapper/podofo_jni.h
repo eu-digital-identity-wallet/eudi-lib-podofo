@@ -28,7 +28,10 @@ public:
     bool isLoaded() const;
     void printState() const;
     std::string calculateHash();
-    void finalizeSigningWithSignedHash(const std::string& signedHash, const std::string& tsr);
+    void finalizeSigningWithSignedHash(const std::string& signedHash, const std::string& tsr, const std::optional<PoDoFo::ValidationData>& validationData);
+    std::string beginSigningLTA();
+    void finishSigningLTA(const std::string& tsr);
+    std::string getCrlFromCertificate(const std::string& base64Cert);
 };
 
 // Helper methods for JNI
@@ -56,7 +59,17 @@ extern "C" {
         JNIEnv* env, jobject thiz, jlong nativeHandle);
 
     JNIEXPORT void JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeFinalizeSigningWithSignedHash(
-        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jSignedHash, jstring jTsr);
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jSignedHash, jstring jTsr,
+        jobject jCertificates, jobject jCrls, jobject jOcsps);
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeBeginSigningLTA(
+        JNIEnv* env, jobject thiz, jlong nativeHandle);
+
+    JNIEXPORT void JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeFinishSigningLTA(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jTsr);
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeGetCrlFromCertificate(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Cert);
 }
 
 #endif // PODOFO_JNI_H
