@@ -82,10 +82,17 @@ NS_ASSUME_NONNULL_BEGIN
  * Finalizes the LTA signature process with a timestamp response.
  *
  * @param tsr The timestamp service response (base64 encoded).
+ * @param certificates An array of base64-encoded certificates for the DSS dictionary.
+ * @param crls An array of base64-encoded CRLs for the DSS dictionary.
+ * @param ocsps An array of base64-encoded OCSP responses for the DSS dictionary.
  * @param error On input, a pointer to an error object. If an error occurs, this pointer is set to an actual error object containing the error information.
  * @return YES if successful, otherwise NO.
  */
-- (BOOL)finishSigningLTAWithTSR:(NSString *)tsr error:(NSError **)error;
+- (BOOL)finishSigningLTAWithTSR:(NSString *)tsr
+         validationCertificates:(nullable NSArray<NSString *> *)certificates
+                 validationCRLs:(nullable NSArray<NSString *> *)crls
+                validationOCSPs:(nullable NSArray<NSString *> *)ocsps
+                          error:(NSError **)error;
 
 /**
  * Extracts the CRL distribution point URL from a base64 encoded certificate.
@@ -95,6 +102,57 @@ NS_ASSUME_NONNULL_BEGIN
  * @return The CRL URL as a string, or nil if an error occurred.
  */
 - (nullable NSString *)getCrlFromCertificate:(NSString *)base64Cert error:(NSError **)error;
+
+/**
+ * Extracts the TSA signer certificate from a base64-encoded TSR.
+ *
+ * @param base64Tsr The base64-encoded TSR (timestamp response).
+ * @param error On input, a pointer to an error object. If an error occurs, this pointer is set to an actual error object containing the error information.
+ * @return The base64 DER encoding of the signer certificate, or nil if an error occurred.
+ */
+- (nullable NSString *)extractSignerCertFromTSR:(NSString *)base64Tsr error:(NSError **)error;
+
+/**
+ * Extracts the TSA issuer certificate from a base64-encoded TSR.
+ *
+ * @param base64Tsr The base64-encoded TSR (timestamp response).
+ * @param error On input, a pointer to an error object. If an error occurs, this pointer is set to an actual error object containing the error information.
+ * @return The base64 DER encoding of the issuer certificate, or nil if an error occurred.
+ */
+- (nullable NSString *)extractIssuerCertFromTSR:(NSString *)base64Tsr error:(NSError **)error;
+
+/**
+ * Extracts the OCSP responder URL from a certificate's AIA extension.
+ *
+ * @param base64Cert The certificate encoded in base64.
+ * @param base64IssuerCert The issuer certificate encoded in base64.
+ * @param error On input, a pointer to an error object. If an error occurs, this pointer is set to an actual error object containing the error information.
+ * @return The OCSP responder URL as a string, or nil if an error occurred.
+ */
+- (nullable NSString *)getOCSPFromCertificate:(NSString *)base64Cert
+                           base64IssuerCert:(NSString *)base64IssuerCert
+                                      error:(NSError **)error;
+
+/**
+ * Gets an OCSP request from base64-encoded certificates and returns it as base64.
+ *
+ * @param base64Cert The certificate encoded in base64.
+ * @param base64IssuerCert The issuer certificate encoded in base64.
+ * @param error On input, a pointer to an error object. If an error occurs, this pointer is set to an actual error object containing the error information.
+ * @return The base64-encoded OCSP request, or nil if an error occurred.
+ */
+- (nullable NSString *)buildOCSPRequestFromCertificates:(NSString *)base64Cert
+                                       base64IssuerCert:(NSString *)base64IssuerCert
+                                                  error:(NSError **)error;
+
+/**
+ * Extracts the CA Issuers URL from a certificate's AIA extension.
+ *
+ * @param base64Cert The certificate encoded in base64.
+ * @param error On input, a pointer to an error object. If an error occurs, this pointer is set to an actual error object containing the error information.
+ * @return The CA Issuers URL as a string, or nil if an error occurred.
+ */
+- (nullable NSString *)getCertificateIssuerUrlFromCertificate:(NSString *)base64Cert error:(NSError **)error;
 
 @end
 

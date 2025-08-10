@@ -30,8 +30,13 @@ public:
     std::string calculateHash();
     void finalizeSigningWithSignedHash(const std::string& signedHash, const std::string& tsr, const std::optional<PoDoFo::ValidationData>& validationData);
     std::string beginSigningLTA();
-    void finishSigningLTA(const std::string& tsr);
+    void finishSigningLTA(const std::string& tsr, const std::optional<PoDoFo::ValidationData>& validationData);
     std::string getCrlFromCertificate(const std::string& base64Cert);
+    std::string extractSignerCertFromTSR(const std::string& base64Tsr);
+    std::string extractIssuerCertFromTSR(const std::string& base64Tsr);
+    std::string getOCSPFromCertificate(const std::string& base64Cert, const std::string& base64IssuerCert);
+    std::string buildOCSPRequestFromCertificates(const std::string& base64Cert, const std::string& base64IssuerCert);
+    std::string getCertificateIssuerUrlFromCertificate(const std::string& base64Cert);
 };
 
 // Helper methods for JNI
@@ -66,9 +71,25 @@ extern "C" {
         JNIEnv* env, jobject thiz, jlong nativeHandle);
 
     JNIEXPORT void JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeFinishSigningLTA(
-        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jTsr);
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jTsr,
+        jobject jCertificates, jobject jCrls, jobject jOcsps);
 
     JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeGetCrlFromCertificate(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Cert);
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeExtractSignerCertFromTSR(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Tsr);
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeExtractIssuerCertFromTSR(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Tsr);
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeGetOCSPFromCertificate(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Cert, jstring jBase64IssuerCert);
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeBuildOCSPRequestFromCertificates(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Cert, jstring jBase64IssuerCert);
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeGetCertificateIssuerUrlFromCertificate(
         JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Cert);
 }
 

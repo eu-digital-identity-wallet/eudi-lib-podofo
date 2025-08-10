@@ -98,13 +98,13 @@ std::string PoDoFoWrapper::beginSigningLTA() {
     }
 }
 
-void PoDoFoWrapper::finishSigningLTA(const std::string& tsr) {
+void PoDoFoWrapper::finishSigningLTA(const std::string& tsr, const std::optional<PoDoFo::ValidationData>& validationData) {
     if (!nativeSession) {
         throw std::runtime_error("PoDoFo session is not initialized.");
     }
 
     try {
-        nativeSession->finishSigningLTA(tsr);
+        nativeSession->finishSigningLTA(tsr, validationData);
     } catch (const std::exception& e) {
         __android_log_print(ANDROID_LOG_ERROR, "PoDoFo", "Exception in finishSigningLTA: %s", e.what());
         throw;
@@ -120,6 +120,71 @@ std::string PoDoFoWrapper::getCrlFromCertificate(const std::string& base64Cert) 
 		return nativeSession->getCrlFromCertificate(base64Cert);
 	} catch (const std::exception& e) {
         __android_log_print(ANDROID_LOG_ERROR, "PoDoFo", "Exception in getCrlFromCertificate: %s", e.what());
+		throw;
+	}
+}
+
+std::string PoDoFoWrapper::extractSignerCertFromTSR(const std::string& base64Tsr) {
+	if (!nativeSession) {
+		throw std::runtime_error("PoDoFo session is not initialized.");
+	}
+
+	try {
+		return nativeSession->extractSignerCertFromTSR(base64Tsr);
+	} catch (const std::exception& e) {
+        __android_log_print(ANDROID_LOG_ERROR, "PoDoFo", "Exception in extractSignerCertFromTSR: %s", e.what());
+		throw;
+	}
+}
+
+std::string PoDoFoWrapper::extractIssuerCertFromTSR(const std::string& base64Tsr) {
+	if (!nativeSession) {
+		throw std::runtime_error("PoDoFo session is not initialized.");
+	}
+
+	try {
+		return nativeSession->extractIssuerCertFromTSR(base64Tsr);
+	} catch (const std::exception& e) {
+        __android_log_print(ANDROID_LOG_ERROR, "PoDoFo", "Exception in extractIssuerCertFromTSR: %s", e.what());
+		throw;
+	}
+}
+
+std::string PoDoFoWrapper::getOCSPFromCertificate(const std::string& base64Cert, const std::string& base64IssuerCert) {
+	if (!nativeSession) {
+		throw std::runtime_error("PoDoFo session is not initialized.");
+	}
+
+	try {
+		return nativeSession->getOCSPFromCertificate(base64Cert, base64IssuerCert);
+	} catch (const std::exception& e) {
+        __android_log_print(ANDROID_LOG_ERROR, "PoDoFo", "Exception in getOCSPFromCertificate: %s", e.what());
+		throw;
+	}
+}
+
+std::string PoDoFoWrapper::buildOCSPRequestFromCertificates(const std::string& base64Cert, const std::string& base64IssuerCert) {
+	if (!nativeSession) {
+		throw std::runtime_error("PoDoFo session is not initialized.");
+	}
+
+	try {
+		return nativeSession->buildOCSPRequestFromCertificates(base64Cert, base64IssuerCert);
+	} catch (const std::exception& e) {
+        __android_log_print(ANDROID_LOG_ERROR, "PoDoFo", "Exception in buildOCSPRequestFromCertificates: %s", e.what());
+		throw;
+	}
+}
+
+std::string PoDoFoWrapper::getCertificateIssuerUrlFromCertificate(const std::string& base64Cert) {
+	if (!nativeSession) {
+		throw std::runtime_error("PoDoFo session is not initialized.");
+	}
+
+	try {
+		return nativeSession->getCertificateIssuerUrlFromCertificate(base64Cert);
+	} catch (const std::exception& e) {
+        __android_log_print(ANDROID_LOG_ERROR, "PoDoFo", "Exception in getCertificateIssuerUrlFromCertificate: %s", e.what());
 		throw;
 	}
 }
@@ -349,7 +414,8 @@ extern "C" {
     }
 
     JNIEXPORT void JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeFinishSigningLTA(
-        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jTsr) {
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jTsr,
+        jobject jCertificates, jobject jCrls, jobject jOcsps) {
 
         if (!nativeHandle) {
             throwJavaException(env, "Session not initialized");
@@ -359,7 +425,29 @@ extern "C" {
         try {
             auto* wrapper = reinterpret_cast<PoDoFoWrapper*>(nativeHandle);
             std::string tsr = jstringToString(env, jTsr);
-            wrapper->finishSigningLTA(tsr);
+
+            std::optional<PoDoFo::ValidationData> validationData;
+            if (jCertificates || jCrls || jOcsps) {
+                PoDoFo::ValidationData cppValidationData;
+                if (jCertificates) {
+                    for (const auto& cert : jlistToVector(env, jCertificates)) {
+                        cppValidationData.addCertificate(cert);
+                    }
+                }
+                if (jCrls) {
+                    for (const auto& crl : jlistToVector(env, jCrls)) {
+                        cppValidationData.addCRL(crl);
+                    }
+                }
+                if (jOcsps) {
+                    for (const auto& ocsp : jlistToVector(env, jOcsps)) {
+                        cppValidationData.addOCSP(ocsp);
+                    }
+                }
+                validationData = cppValidationData;
+            }
+
+            wrapper->finishSigningLTA(tsr, validationData);
         } catch (const std::exception& e) {
             throwJavaException(env, e.what());
         }
@@ -383,6 +471,138 @@ extern "C" {
             std::string base64Cert = jstringToString(env, jBase64Cert);
             std::string crlUrl = wrapper->getCrlFromCertificate(base64Cert);
             return crlUrl.empty() ? nullptr : stringToJstring(env, crlUrl);
+        } catch (const std::exception& e) {
+            throwJavaException(env, e.what());
+            return nullptr;
+        }
+    }
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeExtractSignerCertFromTSR(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Tsr) {
+
+        if (!nativeHandle) {
+            throwJavaException(env, "Session not initialized");
+            return nullptr;
+        }
+
+        if (!jBase64Tsr) {
+            throwJavaException(env, "TSR is null");
+            return nullptr;
+        }
+
+        try {
+            auto* wrapper = reinterpret_cast<PoDoFoWrapper*>(nativeHandle);
+            std::string base64Tsr = jstringToString(env, jBase64Tsr);
+            std::string signerCert = wrapper->extractSignerCertFromTSR(base64Tsr);
+            return signerCert.empty() ? nullptr : stringToJstring(env, signerCert);
+        } catch (const std::exception& e) {
+            throwJavaException(env, e.what());
+            return nullptr;
+        }
+    }
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeExtractIssuerCertFromTSR(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Tsr) {
+
+        if (!nativeHandle) {
+            throwJavaException(env, "Session not initialized");
+            return nullptr;
+        }
+
+        if (!jBase64Tsr) {
+            throwJavaException(env, "TSR is null");
+            return nullptr;
+        }
+
+        try {
+            auto* wrapper = reinterpret_cast<PoDoFoWrapper*>(nativeHandle);
+            std::string base64Tsr = jstringToString(env, jBase64Tsr);
+            std::string issuerCert = wrapper->extractIssuerCertFromTSR(base64Tsr);
+            return issuerCert.empty() ? nullptr : stringToJstring(env, issuerCert);
+        } catch (const std::exception& e) {
+            throwJavaException(env, e.what());
+            return nullptr;
+        }
+    }
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeGetOCSPFromCertificate(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Cert, jstring jBase64IssuerCert) {
+
+        if (!nativeHandle) {
+            throwJavaException(env, "Session not initialized");
+            return nullptr;
+        }
+
+        if (!jBase64Cert) {
+            throwJavaException(env, "Certificate is null");
+            return nullptr;
+        }
+
+        if (!jBase64IssuerCert) {
+            throwJavaException(env, "Issuer certificate is null");
+            return nullptr;
+        }
+
+        try {
+            auto* wrapper = reinterpret_cast<PoDoFoWrapper*>(nativeHandle);
+            std::string base64Cert = jstringToString(env, jBase64Cert);
+            std::string base64IssuerCert = jstringToString(env, jBase64IssuerCert);
+            std::string ocspUrl = wrapper->getOCSPFromCertificate(base64Cert, base64IssuerCert);
+            return ocspUrl.empty() ? nullptr : stringToJstring(env, ocspUrl);
+        } catch (const std::exception& e) {
+            throwJavaException(env, e.what());
+            return nullptr;
+        }
+    }
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeBuildOCSPRequestFromCertificates(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Cert, jstring jBase64IssuerCert) {
+
+        if (!nativeHandle) {
+            throwJavaException(env, "Session not initialized");
+            return nullptr;
+        }
+
+        if (!jBase64Cert) {
+            throwJavaException(env, "Certificate is null");
+            return nullptr;
+        }
+
+        if (!jBase64IssuerCert) {
+            throwJavaException(env, "Issuer certificate is null");
+            return nullptr;
+        }
+
+        try {
+            auto* wrapper = reinterpret_cast<PoDoFoWrapper*>(nativeHandle);
+            std::string base64Cert = jstringToString(env, jBase64Cert);
+            std::string base64IssuerCert = jstringToString(env, jBase64IssuerCert);
+            std::string ocspRequest = wrapper->buildOCSPRequestFromCertificates(base64Cert, base64IssuerCert);
+            return ocspRequest.empty() ? nullptr : stringToJstring(env, ocspRequest);
+        } catch (const std::exception& e) {
+            throwJavaException(env, e.what());
+            return nullptr;
+        }
+    }
+
+    JNIEXPORT jstring JNICALL Java_com_podofo_android_PoDoFoWrapper_nativeGetCertificateIssuerUrlFromCertificate(
+        JNIEnv* env, jobject thiz, jlong nativeHandle, jstring jBase64Cert) {
+
+        if (!nativeHandle) {
+            throwJavaException(env, "Session not initialized");
+            return nullptr;
+        }
+
+        if (!jBase64Cert) {
+            throwJavaException(env, "Certificate is null");
+            return nullptr;
+        }
+
+        try {
+            auto* wrapper = reinterpret_cast<PoDoFoWrapper*>(nativeHandle);
+            std::string base64Cert = jstringToString(env, jBase64Cert);
+            std::string issuerUrl = wrapper->getCertificateIssuerUrlFromCertificate(base64Cert);
+            return issuerUrl.empty() ? nullptr : stringToJstring(env, issuerUrl);
         } catch (const std::exception& e) {
             throwJavaException(env, e.what());
             return nullptr;

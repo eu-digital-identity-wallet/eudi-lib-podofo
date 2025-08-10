@@ -146,13 +146,16 @@ public class PoDoFoWrapper {
      * Finalizes the LTA signature process with a timestamp response.
      *
      * @param tsr The timestamp service response (base64 encoded).
+     * @param certificates An array of base64-encoded certificates for the DSS dictionary.
+     * @param crls An array of base64-encoded CRLs for the DSS dictionary.
+     * @param ocsps An array of base64-encoded OCSP responses for the DSS dictionary.
      * @throws PoDoFoException if there is an error during the process.
      */
-    public void finishSigningLTA(String tsr) throws PoDoFoException {
+    public void finishSigningLTA(String tsr, List<String> certificates, List<String> crls, List<String> ocsps) throws PoDoFoException {
         if (nativeHandle == 0) {
             throw new PoDoFoException("Session not initialized");
         }
-        nativeFinishSigningLTA(nativeHandle, tsr);
+        nativeFinishSigningLTA(nativeHandle, tsr, certificates, crls, ocsps);
     }
 
     /**
@@ -169,6 +172,78 @@ public class PoDoFoWrapper {
         return nativeGetCrlFromCertificate(nativeHandle, base64Cert);
     }
 
+    /**
+     * Extracts the TSA signer certificate from a base64-encoded TSR.
+     *
+     * @param base64Tsr The base64-encoded TSR (timestamp response).
+     * @return The base64 DER encoding of the signer certificate.
+     * @throws PoDoFoException if there is an error during the process.
+     */
+    public String extractSignerCertFromTSR(String base64Tsr) throws PoDoFoException {
+        if (nativeHandle == 0) {
+            throw new PoDoFoException("Session not initialized");
+        }
+        return nativeExtractSignerCertFromTSR(nativeHandle, base64Tsr);
+    }
+
+    /**
+     * Extracts the TSA issuer certificate from a base64-encoded TSR.
+     *
+     * @param base64Tsr The base64-encoded TSR (timestamp response).
+     * @return The base64 DER encoding of the issuer certificate.
+     * @throws PoDoFoException if there is an error during the process.
+     */
+    public String extractIssuerCertFromTSR(String base64Tsr) throws PoDoFoException {
+        if (nativeHandle == 0) {
+            throw new PoDoFoException("Session not initialized");
+        }
+        return nativeExtractIssuerCertFromTSR(nativeHandle, base64Tsr);
+    }
+
+    /**
+     * Extracts the OCSP responder URL from a certificate's AIA extension.
+     *
+     * @param base64Cert The certificate encoded in base64.
+     * @param base64IssuerCert The issuer certificate encoded in base64.
+     * @return The OCSP responder URL as a string.
+     * @throws PoDoFoException if there is an error during the process.
+     */
+    public String getOCSPFromCertificate(String base64Cert, String base64IssuerCert) throws PoDoFoException {
+        if (nativeHandle == 0) {
+            throw new PoDoFoException("Session not initialized");
+        }
+        return nativeGetOCSPFromCertificate(nativeHandle, base64Cert, base64IssuerCert);
+    }
+
+    /**
+     * Gets an OCSP request from base64-encoded certificates and returns it as base64.
+     *
+     * @param base64Cert The certificate encoded in base64.
+     * @param base64IssuerCert The issuer certificate encoded in base64.
+     * @return The base64-encoded OCSP request.
+     * @throws PoDoFoException if there is an error during the process.
+     */
+    public String buildOCSPRequestFromCertificates(String base64Cert, String base64IssuerCert) throws PoDoFoException {
+        if (nativeHandle == 0) {
+            throw new PoDoFoException("Session not initialized");
+        }
+        return nativeBuildOCSPRequestFromCertificates(nativeHandle, base64Cert, base64IssuerCert);
+    }
+
+    /**
+     * Extracts the CA Issuers URL from a certificate's AIA extension.
+     *
+     * @param base64Cert The certificate encoded in base64.
+     * @return The CA Issuers URL as a string.
+     * @throws PoDoFoException if there is an error during the process.
+     */
+    public String getCertificateIssuerUrlFromCertificate(String base64Cert) throws PoDoFoException {
+        if (nativeHandle == 0) {
+            throw new PoDoFoException("Session not initialized");
+        }
+        return nativeGetCertificateIssuerUrlFromCertificate(nativeHandle, base64Cert);
+    }
+
     // Native methods implemented in C++
     private native long nativeInit(String conformanceLevel, String hashAlgorithm,
                                    String inputPath, String outputPath,
@@ -180,8 +255,13 @@ public class PoDoFoWrapper {
     private native void nativeFinalizeSigningWithSignedHash(long handle, String signedHash, String tsr,
                                                             List<String> certificates, List<String> crls, List<String> ocsps);
     private native String nativeBeginSigningLTA(long handle);
-    private native void nativeFinishSigningLTA(long handle, String tsr);
+    private native void nativeFinishSigningLTA(long handle, String tsr, List<String> certificates, List<String> crls, List<String> ocsps);
     private native String nativeGetCrlFromCertificate(long handle, String base64Cert);
+    private native String nativeExtractSignerCertFromTSR(long handle, String base64Tsr);
+    private native String nativeExtractIssuerCertFromTSR(long handle, String base64Tsr);
+    private native String nativeGetOCSPFromCertificate(long handle, String base64Cert, String base64IssuerCert);
+    private native String nativeBuildOCSPRequestFromCertificates(long handle, String base64Cert, String base64IssuerCert);
+    private native String nativeGetCertificateIssuerUrlFromCertificate(long handle, String base64Cert);
 
     /**
      * Clean up native resources

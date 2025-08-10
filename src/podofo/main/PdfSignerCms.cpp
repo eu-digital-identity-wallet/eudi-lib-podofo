@@ -106,6 +106,9 @@ void PdfSignerCms::ComputeSignatureDeferred(const bufferview& processedResult, c
         else if (!m_timestampToken.empty() && m_parameters.SignatureType == PdfSignatureType::PAdES_B_LT) {
             m_cmsContext->AddAttribute("1.2.840.113549.1.9.16.2.14", m_timestampToken, false, true);  // Custom OID
         }
+        else if (!m_timestampToken.empty() && m_parameters.SignatureType == PdfSignatureType::PAdES_B_LTA) {
+            m_cmsContext->AddAttribute("1.2.840.113549.1.9.16.2.14", m_timestampToken, false, true);  // Custom OID
+        }
         m_cmsContext->ComputeSignature(processedResult, contents);
     }
 }
@@ -138,6 +141,8 @@ string PdfSignerCms::GetSignatureSubFilter() const
         case PdfSignatureType::PAdES_B_T:
             return "ETSI.CAdES.detached";
         case PdfSignatureType::PAdES_B_LT:
+            return "ETSI.CAdES.detached";
+        case PdfSignatureType::PAdES_B_LTA:
             return "ETSI.CAdES.detached";
         case PdfSignatureType::Pkcs7:
             return "adbe.pkcs7.detached";
@@ -245,6 +250,11 @@ void PdfSignerCms::resetContext()
             params.SkipWriteSigningTime = true;
             break;
         case PdfSignatureType::PAdES_B_LT:
+            params.AddSigningCertificateV2 = true;
+            params.SkipWriteMIMECapabilities = true;
+            params.SkipWriteSigningTime = true;
+            break;
+        case PdfSignatureType::PAdES_B_LTA:
             params.AddSigningCertificateV2 = true;
             params.SkipWriteMIMECapabilities = true;
             params.SkipWriteSigningTime = true;

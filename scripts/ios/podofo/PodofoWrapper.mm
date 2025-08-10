@@ -165,7 +165,11 @@ NSString *const PodofoSignerErrorDomain = @"org.podofo.PodofoSigner";
     }
 }
 
-- (BOOL)finishSigningLTAWithTSR:(NSString *)tsr error:(NSError **)error {
+- (BOOL)finishSigningLTAWithTSR:(NSString *)tsr
+         validationCertificates:(nullable NSArray<NSString *> *)certificates
+                 validationCRLs:(nullable NSArray<NSString *> *)crls
+                validationOCSPs:(nullable NSArray<NSString *> *)ocsps
+                          error:(NSError **)error {
     if (_nativeSession == NULL) {
         if (error) {
             *error = [NSError errorWithDomain:PodofoSignerErrorDomain
@@ -176,7 +180,29 @@ NSString *const PodofoSignerErrorDomain = @"org.podofo.PodofoSigner";
     }
 
     try {
-        _nativeSession->finishSigningLTA([tsr UTF8String]);
+        std::optional<PoDoFo::ValidationData> validationData;
+
+        if (certificates || crls || ocsps) {
+            PoDoFo::ValidationData cppValidationData;
+            if (certificates) {
+                for (NSString *cert in certificates) {
+                    cppValidationData.addCertificate([cert UTF8String]);
+                }
+            }
+            if (crls) {
+                for (NSString *crl in crls) {
+                    cppValidationData.addCRL([crl UTF8String]);
+                }
+            }
+            if (ocsps) {
+                for (NSString *ocsp in ocsps) {
+                    cppValidationData.addOCSP([ocsp UTF8String]);
+                }
+            }
+            validationData = cppValidationData;
+        }
+
+        _nativeSession->finishSigningLTA([tsr UTF8String], validationData);
         return YES;
     } catch (const std::exception& e) {
         if (error) {
@@ -201,6 +227,125 @@ NSString *const PodofoSignerErrorDomain = @"org.podofo.PodofoSigner";
     try {
         std::string crlUrlStr = _nativeSession->getCrlFromCertificate([base64Cert UTF8String]);
         return [NSString stringWithUTF8String:crlUrlStr.c_str()];
+    } catch (const std::exception& e) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:102
+                                     userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithUTF8String:e.what()]}];
+        }
+        return nil;
+    }
+}
+
+- (nullable NSString *)extractSignerCertFromTSR:(NSString *)base64Tsr error:(NSError **)error {
+    if (_nativeSession == NULL) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:101
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Session not initialized"}];
+        }
+        return nil;
+    }
+
+    try {
+        std::string signerCertStr = _nativeSession->extractSignerCertFromTSR([base64Tsr UTF8String]);
+        return [NSString stringWithUTF8String:signerCertStr.c_str()];
+    } catch (const std::exception& e) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:102
+                                     userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithUTF8String:e.what()]}];
+        }
+        return nil;
+    }
+}
+
+- (nullable NSString *)extractIssuerCertFromTSR:(NSString *)base64Tsr error:(NSError **)error {
+    if (_nativeSession == NULL) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:101
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Session not initialized"}];
+        }
+        return nil;
+    }
+
+    try {
+        std::string issuerCertStr = _nativeSession->extractIssuerCertFromTSR([base64Tsr UTF8String]);
+        return [NSString stringWithUTF8String:issuerCertStr.c_str()];
+    } catch (const std::exception& e) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:102
+                                     userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithUTF8String:e.what()]}];
+        }
+        return nil;
+    }
+}
+
+- (nullable NSString *)getOCSPFromCertificate:(NSString *)base64Cert 
+                           base64IssuerCert:(NSString *)base64IssuerCert 
+                                      error:(NSError **)error {
+    if (_nativeSession == NULL) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:101
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Session not initialized"}];
+        }
+        return nil;
+    }
+
+    try {
+        std::string ocspUrlStr = _nativeSession->getOCSPFromCertificate([base64Cert UTF8String], [base64IssuerCert UTF8String]);
+        return [NSString stringWithUTF8String:ocspUrlStr.c_str()];
+    } catch (const std::exception& e) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:102
+                                     userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithUTF8String:e.what()]}];
+        }
+        return nil;
+    }
+}
+
+- (nullable NSString *)buildOCSPRequestFromCertificates:(NSString *)base64Cert 
+                                       base64IssuerCert:(NSString *)base64IssuerCert 
+                                                  error:(NSError **)error {
+    if (_nativeSession == NULL) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:101
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Session not initialized"}];
+        }
+        return nil;
+    }
+
+    try {
+        std::string ocspRequestStr = _nativeSession->buildOCSPRequestFromCertificates([base64Cert UTF8String], [base64IssuerCert UTF8String]);
+        return [NSString stringWithUTF8String:ocspRequestStr.c_str()];
+    } catch (const std::exception& e) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:102
+                                     userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithUTF8String:e.what()]}];
+        }
+        return nil;
+    }
+}
+
+- (nullable NSString *)getCertificateIssuerUrlFromCertificate:(NSString *)base64Cert error:(NSError **)error {
+    if (_nativeSession == NULL) {
+        if (error) {
+            *error = [NSError errorWithDomain:PodofoSignerErrorDomain
+                                         code:101
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Session not initialized"}];
+        }
+        return nil;
+    }
+
+    try {
+        std::string issuerUrlStr = _nativeSession->getCertificateIssuerUrlFromCertificate([base64Cert UTF8String]);
+        return [NSString stringWithUTF8String:issuerUrlStr.c_str()];
     } catch (const std::exception& e) {
         if (error) {
             *error = [NSError errorWithDomain:PodofoSignerErrorDomain
