@@ -39,11 +39,7 @@
 #include <openssl/ts.h>
 #include <openssl/pkcs7.h>
 #include <openssl/err.h>
-#include <podofo/private/OpenSSLInternal.h>
 
-
-using namespace std;
-using namespace PoDoFo;
 namespace fs = std::filesystem;
 
 namespace PoDoFo {
