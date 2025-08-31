@@ -91,6 +91,7 @@ for ABI in "${ANDROID_ARCHS[@]}"; do
         "$INSTALL_DIR/$ABI/lib/libcrypto.a" \
         "$INSTALL_DIR/$ABI/lib/libz.a" \
         -Wl,--no-whole-archive \
+        -Wl,-z,max-page-size=16384 \
         -llog
 
     # Copy C++ runtime library

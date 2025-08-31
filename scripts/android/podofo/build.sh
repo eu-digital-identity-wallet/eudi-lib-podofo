@@ -99,7 +99,10 @@ function build() {
             -DPODOFO_NO_FONTCONFIG=ON \
             -DPODOFO_NO_WIN32GRAPHICS=ON \
             -DPODOFO_NO_X11=ON \
-            -DCMAKE_CXX_FLAGS="-I$LIBXML2_DIR/$ABI/include -I$FREETYPE_DIR/$ABI/include -I$LIBPNG_DIR/$ABI/include -I$OPENSSL_DIR/$ABI/include"
+            -DCMAKE_CXX_FLAGS="-I$LIBXML2_DIR/$ABI/include -I$FREETYPE_DIR/$ABI/include -I$LIBPNG_DIR/$ABI/include -I$OPENSSL_DIR/$ABI/include" \
+            -DCMAKE_C_FLAGS="-fPIC" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384" \
+            -DCMAKE_EXE_LINKER_FLAGS="-Wl,-z,max-page-size=16384"
         
         # Build and install
         make install

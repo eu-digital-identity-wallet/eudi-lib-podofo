@@ -122,7 +122,9 @@ function build() {
             -DHB_HAVE_ICU=OFF \
             -DHB_BUILD_TESTS=OFF \
             -DHB_BUILD_UTILS=OFF \
-            -DHB_BUILD_SUBSET=OFF
+            -DHB_BUILD_SUBSET=OFF \
+            -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384" \
+            -DCMAKE_EXE_LINKER_FLAGS="-Wl,-z,max-page-size=16384"
         
         # Build and install
         make -j$(nproc)

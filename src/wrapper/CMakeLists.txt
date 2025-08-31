@@ -22,6 +22,13 @@ target_include_directories(podofo PRIVATE
     ${CMAKE_SOURCE_DIR}/include/podofo/3rdparty
 )
 
+# Set 16KB alignment for Android compatibility
+if(ANDROID)
+    set_target_properties(podofo PROPERTIES
+        LINK_FLAGS "-Wl,-z,max-page-size=16384"
+    )
+endif()
+
 # Link against required libraries
 target_link_libraries(podofo
     ${PODOFO_LIBRARY}

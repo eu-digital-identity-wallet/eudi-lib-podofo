@@ -130,7 +130,7 @@ function build() {
             STRIP="$STRIP" \
             CFLAGS="-fPIC -O3 -fvisibility=hidden -DPNG_INTEL_SSE_OPT=0" \
             CXXFLAGS="-fPIC -O3 -fvisibility=hidden -DPNG_INTEL_SSE_OPT=0" \
-            LDFLAGS="-fPIC"
+            LDFLAGS="-fPIC -Wl,-z,max-page-size=16384"
         
         # Clean previous build
         make clean

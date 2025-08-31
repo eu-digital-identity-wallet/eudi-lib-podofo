@@ -102,7 +102,7 @@ function build() {
         export CC="$CC"
         export CXX="$CXX"
         export CFLAGS="-fPIC"
-        export LDFLAGS=""
+        export LDFLAGS="-Wl,-z,max-page-size=16384"
 
         # Configure OpenSSL
         cd "$BUILD_DIR/openssl-$OPENSSL_VERSION"

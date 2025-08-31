@@ -148,7 +148,7 @@ function build() {
         export STRIP
         export CFLAGS="-fPIC -O3 -fvisibility=hidden -I$BZIP2_DIR/include"
         export CXXFLAGS="-fPIC -O3 -fvisibility=hidden -I$BZIP2_DIR/include"
-        export LDFLAGS="-fPIC -L$BZIP2_DIR/lib"
+        export LDFLAGS="-fPIC -L$BZIP2_DIR/lib -Wl,-z,max-page-size=16384"
         
         # Configure and build freetype
         "$BUILD_DIR/freetype-$FREETYPE_VERSION/configure" \
