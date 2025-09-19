@@ -1,0 +1,6 @@
+module PoDoFo {
+  header "PodofoWrapper.h"
+  export *
+  link "c++"
+  link "c++abi"
+}
