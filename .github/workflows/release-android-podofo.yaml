@@ -68,7 +68,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y cmake
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         if: steps.cache-android-brotli.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
@@ -115,7 +115,7 @@ jobs:
           tar -xzf build/android/bzip2/download/bzip2-${{ env.BZIP2_VERSION }}.tar.gz -C build/android/bzip2/build/
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         if: steps.cache-android-bzip2.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
@@ -178,7 +178,7 @@ jobs:
           path: build/android/bzip2/build/bzip2-${{ env.BZIP2_VERSION }}
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         if: steps.cache-android-freetype.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
@@ -225,7 +225,7 @@ jobs:
           tar -xzf build/android/libpng/download/libpng-${{ env.LIBPNG_VERSION }}.tar.gz -C build/android/libpng/build/
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         if: steps.cache-android-libpng.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
@@ -274,7 +274,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         if: steps.cache-android-libxml2.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
@@ -321,7 +321,7 @@ jobs:
           tar xzf build/android/openssl/download/openssl-${{ env.OPENSSL_VERSION }}.tar.gz -C build/android/openssl/build/
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         if: steps.cache-android-openssl.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
@@ -373,7 +373,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         if: steps.cache-android-harfbuzz.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
@@ -421,7 +421,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         if: steps.cache-android-zlib.outputs.cache-hit != 'true'
         id: setup-ndk
         with:
@@ -493,7 +493,7 @@ jobs:
           path: deps-android/openssl
 
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         id: setup-ndk
         with:
           ndk-version: r27c
@@ -594,7 +594,7 @@ jobs:
           ./scripts/android/podofo-aar/organize_libs.sh ${{ steps.deps-android-brotli.outputs.download-path }} ${{ steps.deps-android-bzip2.outputs.download-path }} ${{ steps.deps-android-freetype.outputs.download-path }} ${{ steps.deps-android-harfbuzz.outputs.download-path }} ${{ steps.deps-android-libpng.outputs.download-path }} ${{ steps.deps-android-libxml2.outputs.download-path }} ${{ steps.deps-android-openssl.outputs.download-path }} ${{ steps.deps-android-podofo.outputs.download-path }} ${{ steps.deps-android-zlib.outputs.download-path }} build/android/aar
       
       - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         id: setup-ndk
         with:
           ndk-version: r27c
