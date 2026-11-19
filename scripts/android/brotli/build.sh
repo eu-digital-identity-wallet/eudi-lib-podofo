@@ -142,13 +142,16 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 EOF
         
+        # CMake >= 4.0 removed compatibility with cmake_minimum_required < 3.5;
+        # brotli 1.0.9 declares 2.8.6, so raise the policy floor explicitly
         cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=android.toolchain.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF \
             -DBROTLI_BUNDLED_MODE=ON \
             -DBROTLI_DISABLE_TESTS=ON \
-            -DCMAKE_POLICY_DEFAULT_CMP0057=NEW
+            -DCMAKE_POLICY_DEFAULT_CMP0057=NEW \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         
         make -j$(nproc)
         
