@@ -194,11 +194,7 @@ jobs:
         if: steps.cache-android-freetype.outputs.cache-hit != 'true'
         run: |
           chmod +x scripts/android/freetype/build.sh
-          ./scripts/android/freetype/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/freetype ${{ env.FREETYPE_VERSION }} ${{ steps.deps-bzip2.outputs.download-path }} ${{ steps.deps-brotli.outputs.download-path }} --skip-prepare || {
-            echo "=== config.log ==="
-            cat build/android/freetype/build/arm64-v8a/config.log
-            exit 1
-          }
+          ./scripts/android/freetype/build.sh ${{ steps.setup-ndk.outputs.ndk-path }} build/android/freetype ${{ env.FREETYPE_VERSION }} ${{ steps.deps-bzip2.outputs.download-path }} ${{ steps.deps-brotli.outputs.download-path }} --skip-prepare
         env:
           NDK_DIR: ${{ steps.setup-ndk.outputs.ndk-path }}
           FREETYPE_VERSION: ${{ env.FREETYPE_VERSION }}
