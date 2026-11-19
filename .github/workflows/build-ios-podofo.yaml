@@ -211,7 +211,7 @@ jobs:
         if: steps.cache-ios-zlib.outputs.cache-hit != 'true'
         run: |
           mkdir -p build/ios/zlib/download/ build/ios/zlib/build/
-          curl -L "https://zlib.net/zlib-${{ env.ZLIB_VERSION }}.tar.gz" -o build/ios/zlib/download/zlib-${{ env.ZLIB_VERSION }}.tar.gz
+          curl -L "https://github.com/madler/zlib/archive/refs/tags/v${{ env.ZLIB_VERSION }}.tar.gz" -o build/ios/zlib/download/zlib-${{ env.ZLIB_VERSION }}.tar.gz
           tar xzf build/ios/zlib/download/zlib-${{ env.ZLIB_VERSION }}.tar.gz -C build/ios/zlib/build/
 
       - name: Build from source

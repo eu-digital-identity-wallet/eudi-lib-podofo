@@ -60,10 +60,10 @@ function prepare() {
     # Create directories if they don't exist
     mkdir -p "$BUILD_DIR" "$DOWNLOAD_DIR"
 
-    # Download freetype if not already present
+    # Download zlib if not already present
     if [ ! -f "$DOWNLOAD_DIR/zlib-${ZLIB_VERSION}.tar.gz" ]; then
         echo "Downloading zlib..."
-        curl -L "https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz" -o "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION.tar.gz"
+        curl -L "https://github.com/madler/zlib/archive/refs/tags/v${ZLIB_VERSION}.tar.gz" -o "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION.tar.gz"
     fi
 
     # Extract zlib if not already extracted
@@ -124,6 +124,8 @@ EOF
             unset LDFLAGS
         fi
 
+        # CMake >= 4.0 removed compatibility with cmake_minimum_required < 3.5;
+        # zlib 1.3.1 declares 2.4.4...3.15.0, so raise the policy floor explicitly
         cmake "$BUILD_DIR/zlib-${ZLIB_VERSION}" \
             -DCMAKE_TOOLCHAIN_FILE="$BUILD_DIR/ios.toolchain.cmake" \
             -DCMAKE_INSTALL_PREFIX="$install_dir" \
@@ -132,7 +134,8 @@ EOF
             -DDEPLOYMENT_TARGET="14.0" \
             -DSDK_PATH="$SDK_PATH" \
             -DPNG_SHARED=OFF \
-            -DPNG_TESTS=OFF
+            -DPNG_TESTS=OFF \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         cmake --build . --config Release
         cmake --install . --config Release
     }

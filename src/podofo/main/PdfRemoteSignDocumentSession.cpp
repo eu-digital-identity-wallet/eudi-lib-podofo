@@ -291,7 +291,7 @@ PoDoFo::charbuff PoDoFo::PdfRemoteSignDocumentSession::ConvertDSSHashToSignedHas
     BIO* raw_chain = BIO_push(raw_b64, raw_mem);
     PoDoFo::BioPtr bio(raw_chain);
 
-    std::vector<unsigned char> decoded(128);
+    std::vector<unsigned char> decoded((DSSHash.size() * 3) / 4);
     int len = BIO_read(bio.get(), decoded.data(), static_cast<int>(decoded.size()));
     if (len <= 0) throw std::runtime_error("Base64 decode failed");
     decoded.resize(len);
