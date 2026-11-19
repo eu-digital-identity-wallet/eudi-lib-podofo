@@ -70,8 +70,6 @@ function prepare() {
     if [ ! -d "$BUILD_DIR/zlib-$ZLIB_VERSION" ]; then
         echo "Extracting zlib..."
         tar xzf "$DOWNLOAD_DIR/zlib-$ZLIB_VERSION.tar.gz" -C "$BUILD_DIR"
-        # GitHub tag archives extract as zlib-v<VERSION>; normalize to the expected name
-        mv "$BUILD_DIR/zlib-v${ZLIB_VERSION}" "$BUILD_DIR/zlib-$ZLIB_VERSION"
     fi
 }
 
